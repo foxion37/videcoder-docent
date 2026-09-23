@@ -1,0 +1,47 @@
+# AGENTS.md - videcoder-docent
+
+## 프로젝트 핵심
+
+- 바이브코더가 웹앱과 PiP에서 작업 기록을 이해하고 복습하는 설명 전용 도슨트. 서브에이전트 어댑터는 배관·평가용.
+- 도슨트는 설명만 한다. 코드 수정·커밋·실행은 하지 않는다.
+- 답변 언어는 쉬운 한국어. 용어를 쓰면 한 줄로 풀어 쓴다.
+
+## 구조 규칙
+
+- 코어 프롬프트는 `prompt/docent.md` 하나. 호스트·도구·경로 이름을 쓰지 않는다.
+- 어댑터(`adapters/<host>/`)는 프론트매터와 설치 방법만. 프롬프트 본문을 복사하지 않는다.
+- 런타임 코드는 `bin/`(CLI), `app/`(웹앱), `scripts/`뿐. 설명 표시에는 Streamdown·React와 로컬 빌드를 사용한다. 자산은 패키지에 포함하고 실행 중 CDN은 사용하지 않는다 (ADR 0015).
+- 새 결정은 `docs/decisions/NNNN-*.md` 로 남긴다. 문서 안에서 결정을 번복하지 않는다.
+- 코어를 고치면 `scripts/install-omp.sh` 를 다시 실행한다.
+- 학습 기억은 사용자·개념·범위를 구분한다. EASY/NORMAL/HARD는 선호이며 능력 등급이 아니다. 근거·저장·PiP 계약은 ADR 0014를 따른다.
+
+## 운영 원칙
+
+- `AGENTS.md` 는 300줄 미만. 상세 규칙은 문서로 분리.
+- 비밀값은 파일에 쓰지 않는다.
+- 커밋·푸시는 요청 시에만.
+
+## 빠른 링크
+
+- @docs/concept.md
+- @docs/scope.md
+- @docs/architecture.md
+- @docs/open-questions.md
+- @docs/decisions/0001-docs-first.md
+- @docs/decisions/0002-host-agnostic-core-omp-first.md
+- @prompt/docent.md
+- @adapters/omp/README.md
+- @docs/decisions/0003-eval-transcripts-and-normalizer.md
+- @docs/decisions/0004-answer-format.md
+- @docs/decisions/0005-surface-local-web-app.md
+- @docs/decisions/0006-live-and-memory.md
+- @docs/decisions/0007-distribution.md
+- @docs/decisions/0008-glossary-and-faq.md
+- @docs/decisions/0009-long-transcripts.md
+- @docs/decisions/0010-proactive-hints.md
+- @docs/decisions/0011-peers-over-tailscale.md
+- @docs/decisions/0012-refresh-and-replay.md
+- @docs/decisions/0013-claude-subagent-transcripts.md
+- @docs/decisions/0014-learning-evidence-and-pip.md
+- @docs/decisions/0015-explanation-first-surface.md
+- @docs/decisions/0016-docent-model-selection.md

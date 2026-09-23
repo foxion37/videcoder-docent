@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Validate tag and extract release notes
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
+          const { name, version } = JSON.parse(readFileSync('package.json', 'utf8'));
+          if (process.env.RELEASE_TAG !== `v${version}`) {
+            throw new Error(`Tag ${process.env.RELEASE_TAG} does not match package version ${version}`);
+          }
+          const lines = readFileSync('CHANGELOG.md', 'utf8').split(/\r?\n/);
+          const start = lines.findIndex(line => line.startsWith(`## [${version}]`));
+          if (start < 0) throw new Error(`Missing changelog section for ${version}`);
+          const next = lines.findIndex((line, index) => index > start && line.startsWith('## ['));
+          const notes = lines.slice(start, next < 0 ? undefined : next).join('\n').trim();
+          writeFileSync('release-notes.md', `${notes}\n`);
+          appendFileSync(process.env.GITHUB_ENV, `RELEASE_ARCHIVE=${name}-${version}.tgz\n`);
+          NODE
+      - run: npm ci
+      - run: npm run build
+      - name: Check committed assets
+        run: git diff --exit-code -- app/assets
+      - run: node --test tests/*.test.mjs
+      - name: Pack release archives
+        run: |
+          npm pack
+          cp "$RELEASE_ARCHIVE" videcoder-docent.tgz
+      - name: Publish or replace release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" "$RELEASE_ARCHIVE" videcoder-docent.tgz --clobber
+          else
+            gh release create "$RELEASE_TAG" "$RELEASE_ARCHIVE" videcoder-docent.tgz \
+              --verify-tag --title "$RELEASE_TAG" --notes-file release-notes.md
+          fi

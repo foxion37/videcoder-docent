@@ -1,0 +1,56 @@
+name: 기능 제안
+description: 도슨트에 있었으면 하는 기능이나 바뀌었으면 하는 동작
+title: "[제안] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        도슨트는 설명만 하는 도구입니다. 코드를 고치거나 명령을 실행하는 기능은 범위 밖입니다(개념은 `docs/concept.md`, 범위는 `docs/scope.md`).
+
+        제안이 결정으로 이어지면 `docs/decisions/`에 ADR로 남깁니다.
+  - type: textarea
+    id: problem
+    attributes:
+      label: 어떤 상황이 불편한가
+      description: 어떤 작업을 하다가 무엇 때문에 막혔는지 적어 주세요. 기능 이름보다 상황이 중요합니다.
+      placeholder: 에러 카드가 여러 개 뜨면 방금 뜬 것과 조금 전 것을 구분하기 어려워요.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: 어떻게 바뀌면 좋겠나
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 다른 방법이나 이미 해 본 것
+      description: 피해 갈 방법이 있었는지, 다른 도구는 어떻게 하는지 적어 주세요.
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: 관련 영역
+      multiple: true
+      options:
+        - 설명 품질(답변·깊이·용어)
+        - 작업 내용 카드와 라이브 따라가기
+        - 대화와 이어 묻기
+        - 배운 내용 다시보기
+        - 작은 창(PiP)
+        - 설정과 학습 프로필
+        - 다른 컴퓨터(peer)
+        - 설치와 배포
+        - 문서
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: 그 밖에
+      description: 버전(`docent --version`), OS, 브라우저 등 참고할 것이 있으면 적어 주세요. 비밀값과 개인 경로는 쓰지 마세요.
+    validations:
+      required: false
