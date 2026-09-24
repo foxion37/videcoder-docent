@@ -2,6 +2,11 @@
 
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/). 버전은 [SemVer](https://semver.org/lang/ko/). 0.x 동안은 minor 가 새 기능, patch 가 고침.
 
+## [0.15.1] — 2026-09-24
+
+### 고침
+- 로고(파비콘)를 1시간 캐시하던 것을 매번 확인하도록 바꿔, 로고가 바뀌면 새로고침만으로 반영.
+
 ## [0.15.0] — 2026-09-24
 
 첫 공개 준비 릴리스.

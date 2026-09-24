@@ -302,7 +302,7 @@ const handler = async (req, res) => {
 			return res.end(await readFile(join(ROOT, "index.html")));
 		}
 		if (req.method === "GET" && url.pathname === "/favicon.svg") {
-			res.writeHead(200, { "content-type": "image/svg+xml", "cache-control": "public, max-age=3600" });
+			res.writeHead(200, { "content-type": "image/svg+xml", "cache-control": "no-cache" });
 			return res.end(await readFile(join(ROOT, "favicon.svg")));
 		}
 		const asset = STATIC_ASSETS.get(url.pathname);
