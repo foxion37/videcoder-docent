@@ -1,23 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <title>바이브코더 도슨트</title>
-  <defs>
-    <!-- 모든 펀칭 점: 블랙(좌상) ↔ 블루(우하) 한 그라데이션 -->
-    <linearGradient id="punch" gradientUnits="userSpaceOnUse" x1="10" y1="10" x2="54" y2="54">
-      <stop offset="0" stop-color="#111111"/>
-      <stop offset="1" stop-color="#1D4ED8"/>
-    </linearGradient>
-  </defs>
   <rect width="64" height="64" rx="12" fill="#FFD600"/>
-  <g fill="url(#punch)">
-    <!-- D(도슨트): 10 간격 격자 위의 펀칭 점 -->
-    <circle cx="12" cy="12" r="3.4"/><circle cx="22" cy="12" r="3.4"/><circle cx="32" cy="12" r="3.4"/><circle cx="42" cy="12" r="3.4"/>
-    <circle cx="12" cy="22" r="3.4"/><circle cx="52" cy="22" r="3.4"/>
-    <circle cx="12" cy="32" r="3.4"/><circle cx="52" cy="32" r="3.4"/>
-    <circle cx="12" cy="42" r="3.4"/><circle cx="52" cy="42" r="3.4"/>
-    <circle cx="12" cy="52" r="3.4"/><circle cx="22" cy="52" r="3.4"/><circle cx="32" cy="52" r="3.4"/><circle cx="42" cy="52" r="3.4"/>
-    <!-- V(바이브코더): D 안쪽 빈 공간을 사선으로 가로질러 아래 가운데(32,45)에서 만나는 두 점열 -->
-    <circle cx="20.5" cy="20" r="3.1"/><circle cx="24.33" cy="28.33" r="3.1"/><circle cx="28.17" cy="36.67" r="3.1"/>
-    <circle cx="32" cy="45" r="3.1"/>
-    <circle cx="35.83" cy="36.67" r="3.1"/><circle cx="39.67" cy="28.33" r="3.1"/><circle cx="43.5" cy="20" r="3.1"/>
+  <!-- D(도슨트) 펀칭 + 안쪽 사선 하나(바이브코더의 V) -->
+  <g fill="#111111">
+    <circle cx="18" cy="14" r="3.5"/><circle cx="27" cy="14" r="3.5"/><circle cx="36" cy="14" r="3.5"/>
+    <circle cx="18" cy="23" r="3.5"/><circle cx="45" cy="23" r="3.5"/>
+    <circle cx="18" cy="32" r="3.5"/><circle cx="45" cy="32" r="3.5"/>
+    <circle cx="18" cy="41" r="3.5"/><circle cx="45" cy="41" r="3.5"/>
+    <circle cx="18" cy="50" r="3.5"/><circle cx="27" cy="50" r="3.5"/><circle cx="36" cy="50" r="3.5"/>
+    <circle cx="36" cy="23" r="2.6"/><circle cx="31.5" cy="32" r="2.6"/><circle cx="27" cy="41" r="2.6"/>
   </g>
 </svg>
