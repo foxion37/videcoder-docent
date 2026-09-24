@@ -19,7 +19,7 @@
 
 - `AGENTS.md` 는 300줄 미만. 상세 규칙은 문서로 분리.
 - 비밀값은 파일에 쓰지 않는다.
-- 커밋·푸시는 요청 시에만.
+- 공개 저장소 `origin`(foxion37/videcoder-docent) 의 `main` 이 정본이다. 변경은 CHANGELOG·버전 갱신 → noreply 작성자로 커밋 → `main` 푸시 → `v<버전>` 태그 푸시 순서. 태그가 GitHub Release tgz 를 만든다. `archive` 원격(옛 비공개 히스토리)에는 푸시하지 않는다.
 
 ## 빠른 링크
 
