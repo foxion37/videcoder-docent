@@ -2,6 +2,12 @@
 
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/). 버전은 [SemVer](https://semver.org/lang/ko/). 0.x 동안은 minor 가 새 기능, patch 가 고침.
 
+## [0.16.9] — 2026-09-26
+
+### 변경
+- 작은 창(PiP) 작업 카드 제목을 13px에서 15px로 키워 본문 작업 카드 제목(15px, 행간 1.45)과 맞춤. 디자인 검사에 "작은 창 카드 제목" 규칙을 더해 15개 규칙을 검사.
+- 디자인 검사 규칙, 측정 표본, 함정을 `docs/design-check.md`로 분리. 공통 절차는 전역 스킬 `jev-design-check`, 이 프로젝트의 규칙과 명령은 이 문서가 맡음. AGENTS.md와 CONTRIBUTING.md에서 연결.
+
 ## [0.16.8] — 2026-09-25
 
 ### 추가

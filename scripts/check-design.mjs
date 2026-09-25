@@ -45,6 +45,7 @@ const RULES = [
 	{ name: "입력창 한 줄 정렬", rule: "composer.single 에서 textarea, quickQuestion, send 의 centerY 가 서로 1px 이내이고 composer 의 centerY 와도 1.5px 이내", pass: (m) => { const c = m.composer.single; return spread([c.textarea.centerY, c.quickQuestion.centerY, c.send.centerY]) <= 1 && spread([c.composer.centerY, c.send.centerY]) <= 1.5; }, show: (m) => { const c = m.composer.single; return [c.textarea, c.quickQuestion, c.send].map((b) => b.centerY).join(", "); } },
 	{ name: "입력창 여러 줄 정렬", rule: "composer.multi 에서 quickQuestion 과 send 의 centerY 가 1px 이내이고, send 의 bottom 이 composer 의 bottom 보다 3px 이상 8px 이하 위", pass: (m) => { const c = m.composer.multi, gap = c.composer.bottom - c.send.bottom; return spread([c.quickQuestion.centerY, c.send.centerY]) <= 1 && gap >= 3 && gap <= 8; }, show: (m) => { const c = m.composer.multi; return `${c.quickQuestion.centerY}, ${c.send.centerY}, 아래 여백 ${Math.round(c.composer.bottom - c.send.bottom)}px`; } },
 	{ name: "바로잡기 표시 중 정렬", rule: "composer.steer 에서 textarea, quickQuestion, steer, send 의 centerY 가 모두 1px 이내", pass: (m) => { const c = m.composer.steer; return spread([c.textarea.centerY, c.quickQuestion.centerY, c.steer.centerY, c.send.centerY]) <= 1; }, show: (m) => { const c = m.composer.steer; return [c.textarea, c.quickQuestion, c.steer, c.send].map((b) => b.centerY).join(", "); } },
+	{ name: "작은 창 카드 제목", rule: "pipCardTitlePx 가 workCardTitlePx 와 같고 15 이상", pass: (m) => m.pipCardTitlePx === m.workCardTitlePx && m.pipCardTitlePx >= 15, show: (m) => `작은 창 ${m.pipCardTitlePx}px, 본문 카드 ${m.workCardTitlePx}px` },
 ];
 
 /** 페이지 안에서 실행된다. renderAnswer 와 같은 구조의 표본 답을 그려 재고, 입력창 버튼 정렬도 잰다. */
@@ -82,7 +83,12 @@ async function pageMeasure() {
 		approxKoreanCharsPerLine: Math.round(ex.getBoundingClientRect().width / fs),
 		termButton: { background: cs(actions.children[0]).backgroundColor, color: cs(actions.children[0]).color },
 	};
-	a.remove();
+	const pipCard = document.createElement("button"); pipCard.className = "pip-card";
+	const pipTitle = document.createElement("span"); pipTitle.className = "pip-card-title"; pipTitle.textContent = "공개 전환을 누가 할지 정해야 해요";
+	const workTitle = document.createElement("div"); workTitle.className = "event-title"; workTitle.textContent = pipTitle.textContent;
+	pipCard.append(pipTitle); document.body.append(pipCard, workTitle);
+	metrics.pipCardTitlePx = parseFloat(cs(pipTitle).fontSize); metrics.workCardTitlePx = parseFloat(cs(workTitle).fontSize);
+	a.remove(); pipCard.remove(); workTitle.remove();
 	const box = (el) => { const r = el.getBoundingClientRect(); return { centerY: Math.round((r.top + r.height / 2) * 10) / 10, bottom: Math.round(r.bottom * 10) / 10 }; };
 	const q = document.querySelector("#q"), form = document.querySelector("#form"), quick = document.querySelector("#explainMenu summary"), send = document.querySelector("#send"), steer = document.querySelector("#steer");
 	const composer = () => ({ composer: box(form), textarea: box(q), quickQuestion: box(quick), send: box(send) });
