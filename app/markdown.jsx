@@ -5,7 +5,7 @@ import "./markdown.css";
 
 const mounts = new Map();
 const plainTags = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "strong", "em", "del", "pre", "code", "table", "thead", "tbody", "tr", "th", "td", "hr", "br"];
-const plain = Object.fromEntries(plainTags.map((tag) => [tag, ({ children, start, align }) => React.createElement(tag, { ...(tag === "ol" && start ? { start } : {}), ...(align ? { style: { textAlign: align } } : {}) }, children)]));
+const plain = Object.fromEntries(plainTags.map((tag) => [tag, ({ children, start, align, className }) => React.createElement(tag, { ...(className ? { className } : {}), ...(tag === "ol" && start ? { start } : {}), ...(align ? { style: { textAlign: align } } : {}) }, children)]));
 
 function safeHref(value) {
   if (typeof value !== "string" || /[\u0000-\u0020\u007f]/.test(value)) return undefined;
@@ -23,6 +23,10 @@ function docentProse({ names = [] } = {}) {
     const linked = new Set();
     const visit = (node) => {
       if (["link", "linkReference", "code", "inlineCode", "html", "image", "imageReference"].includes(node.type)) return;
+      // 굵은 글씨만 있는 문단(예: "**질문의 선택지**")은 소제목처럼 쓰인다. 아래 본문과 붙이고 앞 묶음과는 띄운다.
+      if (node.type === "paragraph" && node.children?.[0]?.type === "strong" && node.children.slice(1).every((child) => child.type === "text" && /^\s*[:：]?\s*$/.test(child.value))) {
+        node.data = { ...node.data, hProperties: { ...node.data?.hProperties, className: ["md-lead"] } };
+      }
       if (node.type === "blockquote") {
         const text = node.children?.[0]?.children?.[0];
         const alert = text?.type === "text" && /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/i.exec(text.value);

@@ -1,12 +1,16 @@
 .markdown { white-space:normal; overflow-wrap:anywhere; font-size:15px; line-height:1.8; min-width:0; }
-.markdown > div > :first-child, .markdown > :first-child { margin-top:0; }
-.markdown > div > :last-child, .markdown > :last-child { margin-bottom:0; }
-.markdown p { margin:.65em 0; }
-.markdown h1, .markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6 { line-height:1.45; letter-spacing:-.02em; margin:1.2em 0 .55em; font-weight:650; }
+.markdown p { margin:.9em 0; }
+.markdown h1, .markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6 { line-height:1.45; letter-spacing:-.02em; margin:1.7em 0 .35em; font-weight:650; }
+/* 여백 순서: 제목↔본문(.35em) < 문단↔문단(.9em) < 제목+본문 묶음↔다음 묶음(1.7em). 굵은 글씨만 있는 문단도 소제목으로 본다. */
+.markdown .md-lead { margin:1.7em 0 .35em; line-height:1.45; }
+.markdown :is(h1, h2, h3, h4, h5, h6, .md-lead) + * { margin-top:.35em; }
+/* 상자 맨 위·아래는 여백 없음. 제목·소제목 규칙보다 우선하도록 :is 로 우선순위를 올린다. */
+.markdown > div > :first-child:is(*, .md-lead), .markdown > :first-child:is(*, .md-lead) { margin-top:0; }
+.markdown > div > :last-child:is(*, .md-lead), .markdown > :last-child:is(*, .md-lead) { margin-bottom:0; }
 .markdown h1 { font-size:1.45em; } .markdown h2 { font-size:1.25em; } .markdown h3 { font-size:1.1em; }
 .markdown h4, .markdown h5, .markdown h6 { font-size:1em; }
-.markdown ul, .markdown ol { padding-left:1.5em; margin:.6em 0; }
-.markdown li { margin:.25em 0; white-space:normal; }
+.markdown ul, .markdown ol { padding-left:1.5em; margin:.9em 0; }
+.markdown li { margin:.3em 0; white-space:normal; }
 .markdown li > ul, .markdown li > ol { margin:.2em 0; }
 .markdown blockquote { margin:1em 0; padding:10px 14px; background:var(--bg); border:1px solid var(--line); border-radius:8px; color:var(--ink); }
 .markdown .markdown-callout { background:var(--soft); border:0; }
@@ -27,7 +31,7 @@
 .answer-headline.markdown p { margin:0; }
 .a { white-space:normal; }
 .a .ex { white-space:normal; }
-.answer-detail { margin:12px 0; }
+.answer-detail { margin:1.4em 0; }
 .ev .inline-answer > .a { border:0; padding:0; background:transparent; }
 .event-state { color:var(--mute); margin:10px 0; }
 .event-state[data-state=failed], .event-state[data-state=limited] { color:var(--run); }
