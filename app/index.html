@@ -50,7 +50,7 @@
   header .t { font-weight:500; font-size:20px; letter-spacing:-.025em } header .m { color:var(--mute); font-size:12px; margin-top:4px }
   header a { color:var(--accent-ink); font-size:13px }
   #mainHeader { justify-content:flex-start; box-sizing:border-box; height:var(--bar-top); padding-top:0; padding-bottom:0 }
-  #mainHeader > .t { flex:0 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  #mainHeader > .t { flex:0 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:18px; font-weight:400 }
   .header-status { flex:1 1 auto; min-width:0; display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; color:var(--mute); font-size:13px }
   #sub { overflow-wrap:anywhere }
   #refreshed { white-space:nowrap } #refreshed:not(:empty)::before { content:"·"; margin-right:8px }
@@ -68,6 +68,9 @@
   .auto { display:flex; align-items:center; gap:4px; flex:none; color:var(--mute); font-size:13px; white-space:nowrap; cursor:pointer }
   .auto input { flex:none; margin:0; padding:0 }
   #log { flex:1; overflow:auto; padding:14px 22px; display:flex; flex-direction:column; gap:14px }
+  .thread-source { flex:none; box-sizing:border-box; max-height:50vh; overflow:auto; background:var(--pane-work); border:1px solid var(--line); border-radius:12px; padding:12px 16px; max-width:820px }
+  .thread-source-head { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:12px; font-weight:600; color:var(--mute) }
+  .thread-source ul { margin:8px 0 0; padding-left:20px } .thread-source li { margin:3px 0 }
   .q { align-self:flex-end; background:var(--soft); padding:8px 12px; border-radius:14px 14px 2px 14px; max-width:70% }
   .a { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; max-width:820px }
   .a .head { display:flex; gap:10px; align-items:flex-start; font-weight:500; font-size:18px; line-height:1.5 }
@@ -1131,8 +1134,28 @@ function setStage() {
   $("#sessionThreadBtn").hidden = !current;
 }
 
-function renderThread() {
+/** 카드의 사건 원문(AI 출력)을 그 카드 대화 맨 위에 보여 준다. 카드의 "출력 내용 보기"를 따로 열지 않아도 된다. */
+function threadSource(key, c) {
+  const card = key ? cardByThread.get(key) : null;
+  if (!card?.source) return null;
+  const box = el("section", "thread-source"); box.setAttribute("aria-label", "AI 출력 내용");
+  const head = el("div", "thread-source-head"); head.append(catChip(card.dataset.eventType), el("span", null, "AI 출력 내용"));
+  box.append(head, markdown(card.source.text, c, {}, "event-original"));
+  if (card.source.options?.length) box.append(optionList(card.source.options, c));
+  return box;
+}
+
+function optionList(options, c) {
+  const ul = el("ul");
+  for (const option of options) { const item = el("li"); item.append(markdown(option.description ? `${option.label} — ${option.description}` : option.label, c)); ul.append(item); }
+  return ul;
+}
+
+function renderThread({ top = false } = {}) {
   const c = capture(), log = $("#log"), key = currentThread(); clearSurface(log);
+  const source = threadSource(key, c);
+  if (source) log.append(source);
+  const base = log.childElementCount;
   const rows = threadRecords.filter((record) => inThread(record, key));
   for (const r of rows) {
     log.append(questionNode(r.display || displayOf(r.question), key ? null : r.focus));
@@ -1144,16 +1167,17 @@ function renderThread() {
     log.append(renderAnswer(r.answer, c));
   }
   for (const job of manualJobs) if (job.thread === key && job.nodes) log.append(...job.nodes);
-  if (!log.childElementCount) log.append(el("div", "empty", key ? "이 내용에 대해 궁금한 걸 물어보세요." : "이 세션 전체에 대해 궁금한 걸 물어보세요."));
+  if (log.childElementCount === base) log.append(el("div", "empty", key ? "이 내용에 대해 궁금한 걸 물어보세요." : "이 세션 전체에 대해 궁금한 걸 물어보세요."));
   state.latest = rows.at(-1)?.answer ?? null;
-  log.scrollTop = log.scrollHeight;
+  // 카드를 막 열었으면 원문부터 보이게 맨 위에서 시작한다.
+  log.scrollTop = top && source ? 0 : log.scrollHeight;
   syncComposer();
 }
 
 function openThread(focus) {
   setFocus(focus); chatOpen = true; setStage();
   const body = $("#chatBody"); body.classList.remove("enter"); void body.offsetWidth; body.classList.add("enter");
-  renderThread();
+  renderThread({ top: true });
   if (!$("#q").disabled && !pipWindow) $("#q").focus();
 }
 
@@ -1296,6 +1320,7 @@ function renderEvent(ev) {
   if (eventCards.has(key)) return;
   const card = el("article", `ev ${ev.kind}${ev.past ? " past" : ""}`); card.dataset.eventType = ev.sub;
   focus.card = card; focus.thread = thread; card.focus = focus; card.thread = thread;
+  card.source = { text: ev.text, options: Array.isArray(ev.options) ? ev.options : [] };
   const heading = el("div", "event-heading"); heading.append(catChip(ev.sub));
   if (!ev.past) {
     document.querySelectorAll(".event-new").forEach((tag) => tag.remove());
@@ -1306,11 +1331,7 @@ function renderEvent(ev) {
   const title = el("h3", "event-title"); title.append(open);
   const source = el("details", "event-source");
   source.append(el("summary", null, "출력 내용 보기"), markdown(ev.text, c, {}, "event-original"));
-  if (Array.isArray(ev.options) && ev.options.length) {
-    const ul = el("ul");
-    for (const option of ev.options) { const item = el("li"); item.append(markdown(option.description ? `${option.label} — ${option.description}` : option.label, c)); ul.append(item); }
-    source.append(ul);
-  }
+  if (card.source.options.length) source.append(optionList(card.source.options, c));
   const star = button("", () => toggleFavorite(card.focus), "icon-btn small star card-star"); star.innerHTML = STAR_SVG;
   card.append(heading, title, el("p", "event-summary"), status, source, star);
   eventCards.set(key, card); if (thread) cardByThread.set(thread, card); toFlow(card); syncFavorites();
@@ -1800,6 +1821,9 @@ function syncPip() {
     ui.log.append(intro);
     return;
   }
+  const source = threadSource(key, c);
+  if (source) ui.log.append(source);
+  const base = ui.log.childElementCount;
   for (const r of rows) {
     ui.log.append(questionNode(r.display || displayOf(r.question), key ? null : r.focus));
     if (r.steers?.length) {
@@ -1817,8 +1841,8 @@ function syncPip() {
     job.pipBubble = bubble; fillBubble(job, bubble);
     ui.log.append(question, lines, bubble);
   }
-  if (!ui.log.childElementCount) ui.log.append(el("div", "empty", key ? "이 내용에 대해 궁금한 걸 물어보세요." : "이 세션 전체에 대해 궁금한 걸 물어보세요."));
-  ui.log.scrollTop = ui.log.scrollHeight;
+  if (ui.log.childElementCount === base) ui.log.append(el("div", "empty", key ? "이 내용에 대해 궁금한 걸 물어보세요." : "이 세션 전체에 대해 궁금한 걸 물어보세요."));
+  ui.log.scrollTop = source && !rows.length && !pending.length ? 0 : ui.log.scrollHeight;
 }
 
 for (const [domain, name] of Object.entries(DOMAINS)) {
