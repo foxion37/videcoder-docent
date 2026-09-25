@@ -1,9 +1,9 @@
-/* 한글 본문 기준(KRDS, 토스 TDS, 당근 SEED, WCAG 1.4.8): 본문 16px, 행간 1.6, 자간 0.
-   여백 순서: 제목↔본문(.35em ≈ 6px) < 목록 항목(.55em ≈ 9px) < 문단↔문단(1.15em ≈ 18px) < 제목+본문 묶음↔다음 묶음(2em = 32px).
+/* 한글 본문 기준(KRDS, 토스 TDS, 당근 SEED, WCAG 1.4.8)에서 본문 크기만 사용자 결정으로 14px. 행간 1.6, 자간 0.
+   여백 순서: 제목↔본문(.35em ≈ 5px) < 목록 항목(.55em ≈ 8px) < 문단↔문단(1.15em ≈ 16px) < 제목+본문 묶음↔다음 묶음(2em = 28px).
    굵은 글씨만 있는 문단도 소제목으로 본다. */
-.markdown { white-space:normal; overflow-wrap:anywhere; font-size:16px; line-height:1.6; letter-spacing:0; min-width:0; }
+.markdown { white-space:normal; overflow-wrap:anywhere; font-size:14px; line-height:1.6; letter-spacing:0; min-width:0; }
 .markdown p { margin:1.15em 0; }
-.markdown h1, .markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6 { line-height:1.45; letter-spacing:0; margin:2em 0 .35em; font-weight:650; }
+.markdown h1, .markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6 { line-height:1.45; letter-spacing:0; margin:2em 0 .35em; font-weight:550; }
 .markdown .md-lead { margin:2em 0 .35em; line-height:1.45; }
 .markdown :is(h1, h2, h3, h4, h5, h6, .md-lead) + * { margin-top:.35em; }
 /* 상자 맨 위, 아래는 여백 없음. 제목, 소제목 규칙보다 우선하도록 :is 로 우선순위를 올린다. */
@@ -23,16 +23,18 @@
 .markdown pre code { padding:0; border:0; background:none; }
 .markdown table { display:block; max-width:100%; width:max-content; overflow:auto; border-collapse:collapse; margin:1em 0; font-size:.94em; }
 .markdown th, .markdown td { border:1px solid var(--line); padding:7px 10px; min-width:90px; }
-.markdown th { background:var(--bg); font-weight:650; }
+.markdown th { background:var(--bg); font-weight:550; }
 .markdown a { color:var(--accent-ink); text-decoration:underline; text-underline-offset:3px; }
 .markdown hr { border:0; border-top:1px solid var(--line); margin:1.2em 0; }
 .markdown .term-link { display:inline; font:inherit; color:var(--accent-ink); background:transparent; border:0; border-bottom:1px dotted currentColor; border-radius:0; padding:0; margin:0; cursor:pointer; text-align:inherit; }
 .markdown-image-note { color:var(--mute); font-size:13px; }
 .markdown input[type=checkbox] { margin-right:7px; }
-.answer-headline.markdown { font-size:18px; font-weight:500; line-height:1.5; }
+.answer-headline.markdown { font-size:16px; font-weight:400; line-height:1.5; }
 .answer-headline.markdown p { margin:0; }
 .a { white-space:normal; }
 .a .ex { white-space:normal; }
+/* 글씨가 14px이라 넓은 칸에서는 한 줄이 44자를 넘는다. 글 줄만 약 42자로 묶고, 표와 코드는 칸 너비를 그대로 쓴다. */
+.a .markdown :is(p, li, blockquote, h1, h2, h3, h4, h5, h6) { max-width:42em; }
 .answer-detail { margin:1.4em 0; }
 .ev .inline-answer > .a { border:0; padding:0; background:transparent; }
 .event-state { color:var(--mute); margin:10px 0; }

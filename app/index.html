@@ -17,27 +17,29 @@
   [hidden] { display:none !important }
   button { color:inherit }
   body { margin:0; font:15px/1.55 "Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; color:var(--ink); background:var(--bg); height:100vh; display:grid; grid-template-columns:300px minmax(0, 1fr) }
+  /* 기본으로 굵게 나오는 제목, 굵은 글씨, 표 머리도 한 단계 가볍게(700 → 600). 명시한 굵기는 각 규칙에서 정한다. */
+  h1, h2, h3, h4, h5, h6, b, strong, th { font-weight:600 }
   aside { background:var(--panel); overflow:auto }
   :root { --bar-top:64px; --bar-sub:56px }
   aside h1 { display:flex; align-items:center; box-sizing:border-box; height:var(--bar-top); font-size:15px; margin:0; padding:0 16px; border-bottom:1px solid var(--line) }
   .logo { display:block; flex:none; width:32px; height:32px; border-radius:7px }
   .brand { position:relative; display:flex; align-items:center; gap:9px; min-width:0; padding:0; border:0; background:none; font:inherit; cursor:pointer; color:var(--ink) }
-  .brand-name { font-size:14px; font-weight:600; letter-spacing:-.02em; white-space:nowrap }
+  .brand-name { font-size:14px; font-weight:500; letter-spacing:-.02em; white-space:nowrap }
   .brand:hover .brand-name { color:var(--accent-ink) }
-  .brand[data-tip]:hover::after, .brand[data-tip]:focus-visible::after { content:attr(data-tip); position:absolute; z-index:10; top:calc(100% + 6px); left:0; white-space:nowrap; font-size:12px; font-weight:500; line-height:1.4; padding:4px 8px; border-radius:6px; background:var(--ink); color:var(--bg); pointer-events:none }
+  .brand[data-tip]:hover::after, .brand[data-tip]:focus-visible::after { content:attr(data-tip); position:absolute; z-index:10; top:calc(100% + 6px); left:0; white-space:nowrap; font-size:12px; font-weight:400; line-height:1.4; padding:4px 8px; border-radius:6px; background:var(--ink); color:var(--bg); pointer-events:none }
   .aside-tools { display:flex; align-items:center; gap:6px; margin-left:auto }
   .icon-btn { position:relative; display:grid; place-items:center; width:32px; height:32px; padding:0; border:1px solid var(--line); border-radius:50%; background:var(--btn); color:var(--ink); cursor:pointer }
   .icon-btn svg { width:17px; height:17px }
   .icon-btn:hover { border-color:var(--accent); color:var(--accent-ink) }
   .icon-btn.on { background:var(--accent); border-color:var(--accent); color:var(--on-accent) }
-  .icon-btn[data-tip]:hover::after, .icon-btn[data-tip]:focus-visible::after { content:attr(data-tip); position:absolute; z-index:10; top:calc(100% + 6px); right:0; white-space:nowrap; font-size:12px; font-weight:500; line-height:1.4; padding:4px 8px; border-radius:6px; background:var(--ink); color:var(--bg); pointer-events:none }
+  .icon-btn[data-tip]:hover::after, .icon-btn[data-tip]:focus-visible::after { content:attr(data-tip); position:absolute; z-index:10; top:calc(100% + 6px); right:0; white-space:nowrap; font-size:12px; font-weight:400; line-height:1.4; padding:4px 8px; border-radius:6px; background:var(--ink); color:var(--bg); pointer-events:none }
   .filter-row { padding:12px 16px; border-bottom:1px solid var(--line) }
   .side-title small { color:var(--mute); font-weight:400; margin-left:6px; font-variant-numeric:tabular-nums }
   #filter { display:block; width:100%; padding:7px 12px; margin:0 }
   .sess { display:block; width:100%; text-align:left; border:0; border-bottom:1px solid var(--line); background:none; padding:16px; cursor:pointer; font:inherit }
   .sess:hover { background:var(--hover) } .sess.on { background:var(--soft) }
   .sess:focus-visible { outline:2px solid var(--accent-ink); outline-offset:-3px }
-  .sess .t { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-size:14px; line-height:1.45; font-weight:500; letter-spacing:-.02em }
+  .sess .t { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-size:14px; line-height:1.45; font-weight:400; letter-spacing:-.02em }
   .sess .m { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12px; margin-top:10px; line-height:1.6 }
   .session-meta { max-width:100%; overflow-wrap:anywhere }
   .session-meta.platform { color:var(--platform) }
@@ -47,15 +49,15 @@
   .session-meta.time { color:var(--mute); font-variant-numeric:tabular-nums }
   main { display:flex; flex-direction:column; min-width:0; min-height:0 }
   header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 22px; border-bottom:1px solid var(--line); background:var(--panel) }
-  header .t { font-weight:500; font-size:20px; letter-spacing:-.025em } header .m { color:var(--mute); font-size:12px; margin-top:4px }
+  header .t { font-weight:400; font-size:20px; letter-spacing:-.025em } header .m { color:var(--mute); font-size:12px; margin-top:4px }
   header a { color:var(--accent-ink); font-size:13px }
   #mainHeader { justify-content:flex-start; box-sizing:border-box; height:var(--bar-top); padding-top:0; padding-bottom:0 }
-  #mainHeader > .t { flex:0 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:18px; font-weight:400 }
+  #mainHeader > .t { flex:0 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:16px; font-weight:400 }
   .header-status { flex:1 1 auto; min-width:0; display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; color:var(--mute); font-size:13px }
   #sub { overflow-wrap:anywhere }
   #refreshed { white-space:nowrap } #refreshed:not(:empty) { margin-left:4px }
   .session-info { position:relative; font-size:13px }
-  .session-info > summary { list-style:none; display:inline-flex; align-items:center; justify-content:center; gap:5px; height:26px; line-height:1; box-sizing:border-box; cursor:pointer; white-space:nowrap; font-size:13px; font-weight:600; color:var(--ink); border:1px solid var(--accent); background:var(--soft); border-radius:999px; padding:0 11px 0 8px }
+  .session-info > summary { list-style:none; display:inline-flex; align-items:center; justify-content:center; gap:5px; height:26px; line-height:1; box-sizing:border-box; cursor:pointer; white-space:nowrap; font-size:13px; font-weight:500; color:var(--ink); border:1px solid var(--accent); background:var(--soft); border-radius:999px; padding:0 11px 0 8px }
   .session-info > summary svg { display:block }
   .session-info > summary::-webkit-details-marker { display:none }
   .session-info > summary:hover, .session-info[open] > summary { background:var(--accent); color:var(--on-accent) }
@@ -71,7 +73,7 @@
   .thread-source { flex:none; align-self:stretch; box-sizing:border-box; background:var(--pane-work); border:1px solid var(--line); border-radius:12px; padding:12px 16px }
   /* 대화의 출력 칸(AI 출력·도슨트 답)은 오른쪽 아래 손잡이로 크기를 바꿀 수 있다. 줄어들지 않도록 flex:none. */
   #log .a, #log .thread-source { flex:none; overflow:auto; resize:both; min-width:240px; min-height:48px }
-  .thread-source-head { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:12px; font-weight:600; color:var(--mute) }
+  .thread-source-head { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:12px; font-weight:500; color:var(--mute) }
   .thread-source ul { margin:8px 0 0; padding-left:20px } .thread-source li { margin:3px 0 }
   /* 진행 중 말풍선: 질문(오른쪽)과 마주 보는 왼쪽 말풍선에 입력 중 점 모션과 진행 상태. 글이 오면 설명 아래에 점만 남는다. */
   #log .a.pending-answer.typing, .pip-log .a.pending-answer.typing { align-self:flex-start; display:inline-flex; align-items:center; gap:10px; width:auto; min-width:0; min-height:0; max-width:70%; resize:none; overflow:visible; padding:10px 14px; border-radius:14px 14px 14px 2px }
@@ -81,18 +83,18 @@
   .typing-dots i { width:6px; height:6px; border-radius:50%; background:var(--mute); animation:typingDot 1.2s ease-in-out infinite }
   .typing-dots i:nth-child(2) { animation-delay:.15s } .typing-dots i:nth-child(3) { animation-delay:.3s }
   @keyframes typingDot { 0%, 60%, 100% { transform:translateY(0); opacity:.35 } 30% { transform:translateY(-4px); opacity:1 } }
-  .q { align-self:flex-end; background:var(--soft); padding:8px 12px; border-radius:14px 14px 2px 14px; max-width:70% }
+  .q { align-self:flex-end; background:var(--soft); padding:8px 12px; border-radius:14px 14px 2px 14px; max-width:70%; font-size:14px }
   .a { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; max-width:820px }
-  .a .head { display:flex; gap:10px; align-items:flex-start; font-weight:500; font-size:18px; line-height:1.5 }
-  .badge { flex:none; display:inline-flex; align-items:center; justify-content:center; height:22px; font-size:12px; line-height:1; font-weight:600; padding:0 9px; border-radius:999px; color:var(--on-status); margin-top:3px }
+  .a .head { display:flex; gap:10px; align-items:flex-start; font-weight:400; font-size:16px; line-height:1.5 }
+  .badge { flex:none; display:inline-flex; align-items:center; justify-content:center; height:22px; font-size:12px; line-height:1; font-weight:500; padding:0 9px; border-radius:999px; color:var(--on-status); margin-top:3px }
   .badge.done{background:var(--done)} .badge.running{background:var(--run)} .badge.blocked{background:var(--blk)} .badge.none{display:none}
   .a .ex { margin:8px 0 0 } .a ul { margin:10px 0 0; padding-left:20px } .a li { margin:3px 0 }
   .a .meta { color:var(--mute); font-size:12px; margin-top:14px }
   /* 답 아래 영역: 본문 → 자세히 보기 → 행동 버튼 → 메타 순서로 한 단계씩 띄운다. 용어 뜻 찾기가 가장 중요한 행동이라 노란 바탕 검정 글씨. */
   .a .answer-details { margin-top:24px }
-  .a .answer-details > summary { cursor:pointer; font-size:14px; font-weight:600; color:var(--accent-ink); padding:4px 0 }
+  .a .answer-details > summary { cursor:pointer; font-size:14px; font-weight:500; color:var(--accent-ink); padding:4px 0 }
   .a .answer-actions { margin-top:22px; gap:8px 10px }
-  .control.term-find { background:var(--accent); border-color:var(--accent); color:#111; font-weight:650 }
+  .control.term-find { background:var(--accent); border-color:var(--accent); color:#111; font-weight:550 }
   .control.term-find:hover { border-color:#111 }
   .a.err { border-color:var(--blk); color:var(--blk) }
   .wait { color:var(--mute) } .wait::after { content:""; animation:dots 1.2s steps(4,end) infinite }
@@ -116,7 +118,7 @@
   .ev { border:1px solid var(--line); background:var(--panel); padding:14px 16px; border-radius:8px; max-width:820px; font-size:14px }
   .ev.past { background:var(--bg) }
   .ev.error > b { color:var(--blk) } .ev.question > b { color:var(--activity) } .ev.assistant > b { color:var(--platform) } .ev.done > b { color:var(--done) }
-  .ev > b { display:block; margin-bottom:8px; font-size:12px; font-weight:600 } .ev .evt { white-space:pre-wrap; color:var(--ink); line-height:1.65 } .ev ul { margin:6px 0 0; padding-left:18px }
+  .ev > b { display:block; margin-bottom:8px; font-size:12px; font-weight:500 } .ev .evt { white-space:pre-wrap; color:var(--ink); line-height:1.65 } .ev ul { margin:6px 0 0; padding-left:18px }
   .ev { position:relative; cursor:pointer } .ev:hover { border-color:var(--accent) }
   .event-open { display:block; width:100%; font:inherit; color:inherit; text-align:left; background:none; border:0; padding:0; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
   .event-open::after { content:""; position:absolute; inset:0; border-radius:8px }
@@ -145,11 +147,11 @@
   .wiki-entry > summary { list-style:none; display:flex; align-items:baseline; gap:14px; padding:12px 16px; cursor:pointer }
   .wiki-entry > summary::-webkit-details-marker { display:none }
   .wiki-entry > summary:hover { background:var(--hover); border-radius:12px }
-  .wiki-term { font-weight:500; flex:none; min-width:120px; max-width:40%; font-size:16px; overflow-wrap:anywhere }
+  .wiki-term { font-weight:400; flex:none; min-width:120px; max-width:40%; font-size:16px; overflow-wrap:anywhere }
   .wiki-gloss { flex:1; min-width:0; color:var(--ink); font-size:14px }
   .wiki-entry > summary .review-meta { flex:none }
   .wiki-entry > :not(summary) { margin:0 16px 12px }
-  .wiki-label { font-size:12px; font-weight:600; color:var(--mute); margin-bottom:6px }
+  .wiki-label { font-size:12px; font-weight:500; color:var(--mute); margin-bottom:6px }
   .wiki-code pre { margin:0 0 8px; padding:10px 12px; border-radius:8px; background:var(--bg); border:1px solid var(--line); font:13px/1.6 ui-monospace, monospace; white-space:pre-wrap; overflow-wrap:anywhere }
   .wiki-contexts { list-style:none; margin:0 16px 14px; padding:0; display:flex; flex-direction:column; gap:4px }
   .wiki-context { display:flex; align-items:baseline; gap:10px; width:100%; text-align:left; font:inherit; font-size:14px; border:0; background:none; padding:4px 0; cursor:pointer; color:var(--accent-ink) }
@@ -180,10 +182,10 @@
   .a details summary { cursor:pointer; color:var(--accent-ink) }
   .mode-table { width:100%; border-collapse:collapse; font-size:13px; margin-bottom:10px }
   .mode-table th, .mode-table td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--line) }
-  .mode-table thead th { color:var(--mute); font-weight:600 }
-  .mode-table tbody th { width:90px; font-weight:650 }
+  .mode-table thead th { color:var(--mute); font-weight:500 }
+  .mode-table tbody th { width:90px; font-weight:550 }
   #preferencesForm { display:flex; flex-direction:column; gap:8px; margin-top:12px; font-size:13px }
-  #preferencesForm h4 { margin:8px 0 0; font-size:13px; color:var(--mute); font-weight:600 }
+  #preferencesForm h4 { margin:8px 0 0; font-size:13px; color:var(--mute); font-weight:500 }
   .preference { display:flex; align-items:center; justify-content:space-between; gap:8px }
   .preference select { width:190px }
   #preferencesSave { margin-top:8px }
@@ -216,15 +218,15 @@
   .evidence-block pre { white-space:pre-wrap; overflow-wrap:anywhere; font:13px/1.6 ui-monospace, "Symbols Nerd Font Mono", "JetBrainsMono Nerd Font", "MesloLGS NF", monospace; margin:8px 0 0 }
   .evidence-block h3 { margin:0; font-size:14px }
   .event-heading { display:flex; align-items:center; gap:8px; margin-bottom:6px; color:var(--mute); font-size:12px }
-  .event-new { display:inline-flex; align-items:center; height:22px; line-height:1; color:var(--activity); font-size:11px; font-weight:650 }
-  .event-title { font-size:15px; line-height:1.45; margin:0 0 6px; font-weight:500; min-width:0 }
+  .event-new { display:inline-flex; align-items:center; height:22px; line-height:1; color:var(--activity); font-size:11px; font-weight:550 }
+  .event-title { font-size:16px; line-height:1.45; margin:0 0 6px; font-weight:400; min-width:0 }
   .event-state { margin-bottom:8px; color:var(--mute); font-size:13px }
   .event-state:empty { display:none }
   .ev.on { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) }
   /* 작은 창: 작업 내용(미니) + 선택 카드 대화. 좁으면 위/아래, 720px 이상이면 좌/우. 비중 35:65 */
   .pip-body { display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:auto minmax(0,1fr); height:100vh; padding:0; font-size:14px }
   .pip-head { display:flex; align-items:center; gap:8px; height:44px; padding:0 8px 0 12px; border-bottom:1px solid var(--line); background:var(--panel) }
-  .pip-title { flex:1; min-width:0; font-weight:600; font-size:14px; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  .pip-title { flex:1; min-width:0; font-weight:500; font-size:14px; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
   .pip-collapse svg { transition:transform .15s } .pip-collapse.collapsed svg { transform:rotate(180deg) }
   .pip-main { display:grid; min-height:0; grid-template-rows:minmax(0,35fr) minmax(0,65fr) }
   .pip-work, .pip-chat { display:flex; flex-direction:column; min-height:0; min-width:0 }
@@ -234,19 +236,19 @@
     .pip-main { grid-template-rows:minmax(0,1fr); grid-template-columns:minmax(0,35fr) minmax(0,65fr) }
     .pip-work { border-bottom:0; border-right:2px solid var(--line) }
   }
-  .pip-pane-title { flex:none; display:flex; align-items:center; gap:6px; height:32px; padding:0 8px 0 12px; font-size:12px; font-weight:600; color:var(--mute); border-bottom:1px solid var(--line) }
+  .pip-pane-title { flex:none; display:flex; align-items:center; gap:6px; height:32px; padding:0 8px 0 12px; font-size:12px; font-weight:500; color:var(--mute); border-bottom:1px solid var(--line) }
   .pip-pane-title h2 { flex:1; min-width:0; margin:0; font:inherit; color:inherit; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
   .pip-pane-title small { font-weight:400; font-variant-numeric:tabular-nums }
   .pip-chat-head h2 { color:var(--ink); font-size:13px }
   .pip-cards { flex:1; min-height:0; overflow:auto; padding:8px; display:flex; flex-direction:column; gap:6px }
-  .pip-card { display:flex; align-items:center; gap:8px; width:100%; text-align:left; font:inherit; font-size:15px; line-height:1.45; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:7px 10px; cursor:pointer }
+  .pip-card { display:flex; align-items:center; gap:8px; width:100%; text-align:left; font:inherit; font-size:16px; line-height:1.45; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:7px 10px; cursor:pointer }
   .pip-card:hover { border-color:var(--accent) }
   .pip-card.on { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) }
   .pip-card .cat { flex:none; height:20px; font-size:11px; padding:0 7px 0 5px } .pip-card .cat svg { width:12px; height:12px }
   .pip-card-title { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
   .pip-fav { flex:none; display:block; width:14px; height:14px; color:var(--accent-ink) } .pip-fav svg { display:block; width:14px; height:14px; fill:var(--accent) }
   .pip-log { flex:1; min-height:0; overflow:auto; padding:10px 12px; display:flex; flex-direction:column; gap:10px }
-  .pip-log .a { padding:10px 12px; font-size:13px } .pip-log .markdown { font-size:14px } .pip-log .a .head { font-size:15px } .pip-log .q { max-width:85%; font-size:13px }
+  .pip-log .a { padding:10px 12px; font-size:13px } .pip-log .markdown { font-size:14px } .pip-log .a .head { font-size:16px } .pip-log .q { max-width:85%; font-size:13px }
   .pip-log .empty { font-size:13px; padding:0 12px }
   .pip-foot { flex:none; padding:8px 10px 10px; border-top:1px solid var(--line) }
   .pip-status:not(:empty) { margin-bottom:6px }
@@ -273,13 +275,13 @@
   #settings .depth-row { margin:0; gap:12px }
   #settings .depth-row > :first-child { min-width:96px }
   #settings .depth-row select { min-width:190px }
-  .set-group { margin:8px 2px -4px; font-size:12px; font-weight:600; color:var(--mute) }
+  .set-group { margin:8px 2px -4px; font-size:12px; font-weight:500; color:var(--mute) }
   .set-list { margin:10px 0 8px; padding-left:18px; font-size:13px; color:var(--mute) }
   .set-list li { margin:2px 0 }
   input[type=checkbox] { accent-color:var(--accent) }
   #workspace { flex:1; min-height:0; display:grid }
   #flowPane, #chatPane { display:flex; flex-direction:column; min-height:0; min-width:0 }
-  .pane-title { flex:none; box-sizing:border-box; height:var(--bar-sub); display:flex; align-items:center; margin:0; padding:0 16px; font-size:13px; font-weight:600; color:var(--mute); border-bottom:1px solid var(--line) }
+  .pane-title { flex:none; box-sizing:border-box; height:var(--bar-sub); display:flex; align-items:center; margin:0; padding:0 16px; font-size:13px; font-weight:500; color:var(--mute); border-bottom:1px solid var(--line) }
   .pane-notice { padding:8px 16px 0 } .pane-notice:empty { display:none }
   #flow { flex:1; overflow:auto; padding:14px; display:flex; flex-direction:column; gap:10px }
   #flow .ev { max-width:none }
@@ -313,7 +315,7 @@
   .steer-btn { flex:none; white-space:nowrap }
   /* 카테고리 색과 아이콘 */
   :root { --cat-question:light-dark(#b45309,#f3a64d); --cat-result:light-dark(#15803d,#6fd08f); --cat-plan:light-dark(#4f46e5,#a9a6f8); --pane-work:light-dark(#efeee9,#111111) }
-  .cat { --cat:var(--mute); display:inline-flex; align-items:center; justify-content:center; gap:4px; height:22px; font-size:12px; line-height:1; font-weight:600; color:var(--cat); background:color-mix(in srgb, var(--cat) 13%, transparent); border-radius:999px; padding:0 9px 0 7px; white-space:nowrap }
+  .cat { --cat:var(--mute); display:inline-flex; align-items:center; justify-content:center; gap:4px; height:22px; font-size:12px; line-height:1; font-weight:500; color:var(--cat); background:color-mix(in srgb, var(--cat) 13%, transparent); border-radius:999px; padding:0 9px 0 7px; white-space:nowrap }
   .cat svg { display:block }
   .cat svg { width:14px; height:14px; flex:none }
   .cat.question { --cat:var(--cat-question) } .cat.result { --cat:var(--cat-result) } .cat.plan { --cat:var(--cat-plan) }

@@ -31,7 +31,7 @@ const zero = (value) => value === "normal" || parseFloat(value) === 0;
 
 /** 규칙 하나 = 사람과 Jev가 읽는 기준 문장(rule) + 같은 기준의 수치 판정(pass) + 보여 줄 값(show). */
 const RULES = [
-	{ name: "본문 크기", rule: "bodyFontPx 가 16 이상", pass: (m) => m.bodyFontPx >= 16, show: (m) => `${m.bodyFontPx}px` },
+	{ name: "본문 크기", rule: "bodyFontPx 가 14 이상", pass: (m) => m.bodyFontPx >= 14, show: (m) => `${m.bodyFontPx}px` },
 	{ name: "행간", rule: "lineHeightRatio 가 1.5 이상 1.7 이하", pass: (m) => m.lineHeightRatio >= 1.5 && m.lineHeightRatio <= 1.7, show: (m) => `${m.lineHeightRatio}` },
 	{ name: "문단 사이", rule: "paragraphGapPx 가 16 이상이고, 문단 안 줄 사이 여백 bodyFontPx x (lineHeightRatio - 1) 의 1.5배 이상", pass: (m) => m.paragraphGapPx >= 16 && m.paragraphGapPx >= 1.5 * m.bodyFontPx * (m.lineHeightRatio - 1), show: (m) => `${m.paragraphGapPx}px` },
 	{ name: "제목과 본문 사이", rule: "headingToBodyPx 와 boldLeadToBodyPx 가 모두 4 이상이고 paragraphGapPx 의 절반 이하", pass: (m) => Math.min(m.headingToBodyPx, m.boldLeadToBodyPx) >= 4 && Math.max(m.headingToBodyPx, m.boldLeadToBodyPx) <= m.paragraphGapPx / 2, show: (m) => `${m.headingToBodyPx}px, 굵은 소제목 ${m.boldLeadToBodyPx}px` },
@@ -45,7 +45,8 @@ const RULES = [
 	{ name: "입력창 한 줄 정렬", rule: "composer.single 에서 textarea, quickQuestion, send 의 centerY 가 서로 1px 이내이고 composer 의 centerY 와도 1.5px 이내", pass: (m) => { const c = m.composer.single; return spread([c.textarea.centerY, c.quickQuestion.centerY, c.send.centerY]) <= 1 && spread([c.composer.centerY, c.send.centerY]) <= 1.5; }, show: (m) => { const c = m.composer.single; return [c.textarea, c.quickQuestion, c.send].map((b) => b.centerY).join(", "); } },
 	{ name: "입력창 여러 줄 정렬", rule: "composer.multi 에서 quickQuestion 과 send 의 centerY 가 1px 이내이고, send 의 bottom 이 composer 의 bottom 보다 3px 이상 8px 이하 위", pass: (m) => { const c = m.composer.multi, gap = c.composer.bottom - c.send.bottom; return spread([c.quickQuestion.centerY, c.send.centerY]) <= 1 && gap >= 3 && gap <= 8; }, show: (m) => { const c = m.composer.multi; return `${c.quickQuestion.centerY}, ${c.send.centerY}, 아래 여백 ${Math.round(c.composer.bottom - c.send.bottom)}px`; } },
 	{ name: "바로잡기 표시 중 정렬", rule: "composer.steer 에서 textarea, quickQuestion, steer, send 의 centerY 가 모두 1px 이내", pass: (m) => { const c = m.composer.steer; return spread([c.textarea.centerY, c.quickQuestion.centerY, c.steer.centerY, c.send.centerY]) <= 1; }, show: (m) => { const c = m.composer.steer; return [c.textarea, c.quickQuestion, c.steer, c.send].map((b) => b.centerY).join(", "); } },
-	{ name: "작은 창 카드 제목", rule: "pipCardTitlePx 가 workCardTitlePx 와 같고 15 이상", pass: (m) => m.pipCardTitlePx === m.workCardTitlePx && m.pipCardTitlePx >= 15, show: (m) => `작은 창 ${m.pipCardTitlePx}px, 본문 카드 ${m.workCardTitlePx}px` },
+	{ name: "작은 창 카드 제목", rule: "pipCardTitlePx 가 workCardTitlePx 와 같고 16 이상", pass: (m) => m.pipCardTitlePx === m.workCardTitlePx && m.pipCardTitlePx >= 16, show: (m) => `작은 창 ${m.pipCardTitlePx}px, 본문 카드 ${m.workCardTitlePx}px` },
+	{ name: "글자 굵기", rule: "weights 에서 body, headline, cardTitle 이 400 이고 heading 이 550 이고 boldLead 가 600", pass: (m) => { const w = m.weights; return w.body === 400 && w.headline === 400 && w.cardTitle === 400 && w.heading === 550 && w.boldLead === 600; }, show: (m) => { const w = m.weights; return `본문 ${w.body}, 결론 ${w.headline}, 카드 제목 ${w.cardTitle}, 소제목 ${w.heading}, 굵은 글씨 ${w.boldLead}`; } },
 ];
 
 /** 페이지 안에서 실행된다. renderAnswer 와 같은 구조의 표본 답을 그려 재고, 입력창 버튼 정렬도 잰다. */
@@ -80,14 +81,16 @@ async function pageMeasure() {
 		listItemGapPx: gap(lis[0], lis[1]),
 		headlineToExplainPx: gap(head, ex), explainToDetailsPx: gap(ex, details), detailsToActionsPx: gap(details, actions), actionsToMetaPx: gap(actions, meta),
 		actionButtonGapPx: Math.round(actions.children[1].getBoundingClientRect().left - actions.children[0].getBoundingClientRect().right),
-		approxKoreanCharsPerLine: Math.round(ex.getBoundingClientRect().width / fs),
+		// 한 줄 길이는 글 줄(문단) 너비로 잰다. 표와 코드는 답 칸 전체 너비를 쓸 수 있다.
+		approxKoreanCharsPerLine: Math.round(ps[0].getBoundingClientRect().width / fs),
 		termButton: { background: cs(actions.children[0]).backgroundColor, color: cs(actions.children[0]).color },
+		weights: { headline: Number(cs(head.querySelector(".answer-headline")).fontWeight), heading: Number(cs(h3).fontWeight), boldLead: Number(cs(lead.querySelector("strong") ?? lead).fontWeight), body: Number(cs(ps[0]).fontWeight) },
 	};
 	const pipCard = document.createElement("button"); pipCard.className = "pip-card";
 	const pipTitle = document.createElement("span"); pipTitle.className = "pip-card-title"; pipTitle.textContent = "공개 전환을 누가 할지 정해야 해요";
 	const workTitle = document.createElement("div"); workTitle.className = "event-title"; workTitle.textContent = pipTitle.textContent;
 	pipCard.append(pipTitle); document.body.append(pipCard, workTitle);
-	metrics.pipCardTitlePx = parseFloat(cs(pipTitle).fontSize); metrics.workCardTitlePx = parseFloat(cs(workTitle).fontSize);
+	metrics.pipCardTitlePx = parseFloat(cs(pipTitle).fontSize); metrics.workCardTitlePx = parseFloat(cs(workTitle).fontSize); metrics.weights.cardTitle = Number(cs(workTitle).fontWeight);
 	a.remove(); pipCard.remove(); workTitle.remove();
 	const box = (el) => { const r = el.getBoundingClientRect(); return { centerY: Math.round((r.top + r.height / 2) * 10) / 10, bottom: Math.round(r.bottom * 10) / 10 }; };
 	const q = document.querySelector("#q"), form = document.querySelector("#form"), quick = document.querySelector("#explainMenu summary"), send = document.querySelector("#send"), steer = document.querySelector("#steer");

@@ -46,7 +46,7 @@ DOCENT_HOME=/tmp/docent-dev DOCENT_PORT=4803 DOCENT_PEERS= npm start
 - `node --test tests/*.test.mjs` — 근거 표시·학습 기억·슬롯 파싱·용어집 같은 결정적 로직을 검사한다. 빠르므로 PR 전에 돌린다.
 - 이 테스트는 **실제 모델 호출과 브라우저 동작을 검증하지 않는다.** 의미 분류·난이도·재설명은 실제 omp로, 작은 창(PiP)은 실제 브라우저로 확인해야 한다. 어떤 검증을 했는지 PR에 적는다.
 - 버그를 고칠 때는 재현이 먼저다. 같은 버그가 다시 나면 실패하는 테스트가 정말 남길 가치가 있는지 따져 보고, 아니면 일회성 스크립트로 확인한다.
-- `npm run check:design` — 화면(CSS, 레이아웃, 여백)을 고쳤을 때 돌린다. 실제 Chrome을 띄워 표본 답과 입력창을 그리고 글자 크기, 여백, 정렬 15개 규칙을 잰다. 규칙 목록, 측정 표본, 함정은 `docs/design-check.md`에 있다. `TYPESAFE_API_KEY`가 있으면 같은 기준을 Jev로도 판정하고, 수치와 Jev 둘 다 통과해야 성공이다. Chrome 경로는 `CHROME_BIN`으로 바꿀 수 있다. 기준을 바꾸려면 `docs/design-check.md`와 `scripts/check-design.mjs`의 규칙 표를 함께 고치고 이유를 CHANGELOG에 적는다.
+- `npm run check:design` — 화면(CSS, 레이아웃, 여백)을 고쳤을 때 돌린다. 실제 Chrome을 띄워 표본 답과 입력창을 그리고 글자 크기, 굵기, 여백, 정렬 16개 규칙을 잰다. 규칙 목록, 측정 표본, 함정은 `docs/design-check.md`에 있다. `TYPESAFE_API_KEY`가 있으면 같은 기준을 Jev로도 판정하고, 수치와 Jev 둘 다 통과해야 성공이다. Chrome 경로는 `CHROME_BIN`으로 바꿀 수 있다. 기준을 바꾸려면 `docs/design-check.md`와 `scripts/check-design.mjs`의 규칙 표를 함께 고치고 이유를 CHANGELOG에 적는다.
 - 포매터·린터 전체 실행은 하지 않는다. 주변 코드 스타일(들여쓰기 탭, 문자열은 겹따옴표·백틱)을 따른다.
 
 ## 라이선스
