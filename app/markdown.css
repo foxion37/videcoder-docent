@@ -31,15 +31,6 @@
 .ev .inline-answer > .a { border:0; padding:0; background:transparent; }
 .event-state { color:var(--mute); margin:10px 0; }
 .event-state[data-state=failed], .event-state[data-state=limited] { color:var(--run); }
-.event-source { margin-top:12px; color:var(--ink); font-size:13px; }
-.event-source > summary { list-style:none; display:inline-flex; align-items:center; gap:6px; height:28px; box-sizing:border-box; padding:0 12px; border:1px solid var(--accent); border-radius:999px; background:var(--soft); color:var(--accent-ink); font-weight:600; line-height:1; cursor:pointer; }
-.event-source > summary::-webkit-details-marker { display:none; }
-.event-source > summary::after { content:""; width:6px; height:6px; border-right:1.6px solid currentColor; border-bottom:1.6px solid currentColor; transform:rotate(45deg); margin:-3px 0 0 2px; transition:transform .15s; }
-.event-source[open] > summary::after { transform:rotate(-135deg); margin:3px 0 0 2px; }
-.event-source > summary:hover, .event-source[open] > summary { background:var(--accent); color:var(--on-accent); }
-.event-source[open] > .markdown { margin-top:10px; padding:12px 14px; border:1px solid var(--line); border-radius:10px; background:var(--panel); font-size:14px; }
-.event-source .evt { margin-top:8px; font-size:13px; }
-.event-source ul { color:var(--ink); }
 .event-selected { border-color:var(--accent); }
 .event-actions { display:flex; flex-wrap:wrap; gap:8px; }
 #actionTarget { margin:0 0 6px; }

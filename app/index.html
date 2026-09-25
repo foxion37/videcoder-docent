@@ -68,7 +68,7 @@
   .auto { display:flex; align-items:center; gap:4px; flex:none; color:var(--mute); font-size:13px; white-space:nowrap; cursor:pointer }
   .auto input { flex:none; margin:0; padding:0 }
   #log { flex:1; overflow:auto; padding:14px 22px; display:flex; flex-direction:column; gap:14px }
-  .thread-source { flex:none; box-sizing:border-box; max-height:50vh; overflow:auto; background:var(--pane-work); border:1px solid var(--line); border-radius:12px; padding:12px 16px; max-width:820px }
+  .thread-source { flex:none; align-self:stretch; box-sizing:border-box; background:var(--pane-work); border:1px solid var(--line); border-radius:12px; padding:12px 16px }
   .thread-source-head { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:12px; font-weight:600; color:var(--mute) }
   .thread-source ul { margin:8px 0 0; padding-left:20px } .thread-source li { margin:3px 0 }
   .q { align-self:flex-end; background:var(--soft); padding:8px 12px; border-radius:14px 14px 2px 14px; max-width:70% }
@@ -379,7 +379,7 @@
         <button id="sessionThreadBtn" class="pill" type="button">세션 전체에 대해 묻기</button>
       </div>
       <div id="chatBody" class="chat-body" hidden>
-      <div class="pane-title chat-head"><span id="threadChip"></span><h2 id="chatTitle">세션 전체 대화</h2><button id="threadStar" class="icon-btn small star" type="button" aria-pressed="false" aria-label="이 대화 즐겨찾기" data-tip="즐겨찾기"></button><button id="threadClose" class="icon-btn small" type="button" aria-label="대화 닫기" data-tip="대화 닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+      <div class="pane-title chat-head"><h2 id="chatTitle">세션 전체 대화</h2><button id="threadStar" class="icon-btn small star" type="button" aria-pressed="false" aria-label="이 대화 즐겨찾기" data-tip="즐겨찾기"></button><button id="threadClose" class="icon-btn small" type="button" aria-label="대화 닫기" data-tip="대화 닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
       <div id="log"></div>
       <footer>
         <div id="draftNotice" class="draft-notice" role="status"></div>
@@ -560,8 +560,8 @@ function syncComposer() {
   send.setAttribute("aria-label", sendLabel); send.title = sendLabel;
   $("#steer").hidden = !(state.busy && state.draft.trim());
   $("#askStatus").textContent = state.status;
-  $("#chatTitle").textContent = state.focus?.card?.displayTitle ?? state.focus?.label ?? "세션 전체 대화";
-  $("#threadChip").replaceChildren(...(state.focus?.card ? [catChip(state.focus.card.dataset.eventType)] : []));
+  // 카드 대화는 맨 위 AI 출력 메시지가 제목 역할을 한다. 머리줄에는 같은 문장을 다시 쓰지 않는다.
+  $("#chatTitle").textContent = state.focus?.card ? "대화" : "세션 전체 대화";
   setStar($("#threadStar"), favoriteThreads.has(currentThread()));
   syncActionChips(); renderAutoStatus(); renderQueue(); renderDraftNotice();
   for (const doc of [document, pipWindow?.document].filter(Boolean)) doc.querySelectorAll(".event-ask").forEach((b) => b.disabled = !current || state.busy || historyLoading);
@@ -1139,7 +1139,7 @@ function threadSource(key, c) {
   const card = key ? cardByThread.get(key) : null;
   if (!card?.source) return null;
   const box = el("section", "thread-source"); box.setAttribute("aria-label", "AI 출력 내용");
-  const head = el("div", "thread-source-head"); head.append(catChip(card.dataset.eventType), el("span", null, "AI 출력 내용"));
+  const head = el("div", "thread-source-head"); head.append(catChip(card.dataset.eventType), el("span", null, "AI 출력"));
   box.append(head, markdown(card.source.text, c, {}, "event-original"));
   if (card.source.options?.length) box.append(optionList(card.source.options, c));
   return box;
@@ -1229,7 +1229,7 @@ function questionNode(text, focus) {
 
 function eventState(card, text, status = "waiting") {
   const node = card.querySelector(".event-state");
-  node.textContent = text || (card.answer ? "" : "누르면 이 내용으로 질문할 수 있어요.");
+  node.textContent = text || "";
   node.dataset.state = status;
   node.classList.toggle("wait", status === "queued" || status === "running");
 }
@@ -1329,11 +1329,9 @@ function renderEvent(ev) {
   const status = el("div", "event-state"); status.setAttribute("role", "status");
   const open = button(focus.label, () => openCard(card, c), "event-open"); open.title = focus.label;
   const title = el("h3", "event-title"); title.append(open);
-  const source = el("details", "event-source");
-  source.append(el("summary", null, "출력 내용 보기"), markdown(ev.text, c, {}, "event-original"));
-  if (card.source.options.length) source.append(optionList(card.source.options, c));
+  // 원문은 카드를 눌렀을 때 대화 맨 위 메시지로 보인다. 카드에는 제목과 요약만 둔다.
   const star = button("", () => toggleFavorite(card.focus), "icon-btn small star card-star"); star.innerHTML = STAR_SVG;
-  card.append(heading, title, el("p", "event-summary"), status, source, star);
+  card.append(heading, title, el("p", "event-summary"), status, star);
   eventCards.set(key, card); if (thread) cardByThread.set(thread, card); toFlow(card); syncFavorites();
   if (thread && pastByThread.has(thread)) attachCardAnswer(card, pastByThread.get(thread));
   else if (ev.ask) attachAuto(card, ev.ask);
@@ -1719,10 +1717,10 @@ function buildPip(doc, win = doc.defaultView) {
   workHeading.append(" ", workCount); workTitle.append(workHeading);
   const cards = el("div", "pip-cards"); cards.id = "pipCards"; cards.setAttribute("aria-label", "작업 내용");
   work.append(workTitle, cards);
-  const chat = el("section", "pip-chat"), chatHead = el("div", "pip-pane-title pip-chat-head"), chatChip = el("span"), chatTitle = el("h2", null, "대화");
+  const chat = el("section", "pip-chat"), chatHead = el("div", "pip-pane-title pip-chat-head"), chatTitle = el("h2", null, "대화");
   const chatClose = button("", closeThread, "icon-btn small"); chatClose.innerHTML = $("#threadClose").innerHTML;
   chatClose.setAttribute("aria-label", "대화 닫기"); chatClose.dataset.tip = "대화 닫기";
-  chatHead.append(chatChip, chatTitle, chatClose);
+  chatHead.append(chatTitle, chatClose);
   const log = el("div", "pip-log"); log.id = "pipLog";
   const foot = el("div", "pip-foot"), status = el("div", "notice pip-status"); status.id = "pipStatus"; status.setAttribute("role", "status");
   const draftNotice = el("div", "draft-notice"); draftNotice.id = "pipDraftNotice"; draftNotice.setAttribute("role", "status");
@@ -1736,7 +1734,7 @@ function buildPip(doc, win = doc.defaultView) {
   form.append(input, menu, steer, send); foot.append(draftNotice, queueList, status, form);
   chat.append(chatHead, log, foot); main.append(work, chat);
   doc.body.append(head, main);
-  return { title, cards, workCount, chatChip, chatTitle, chatClose, log, status, input, steer, send, form, cardsKey: "", threadKey: "" };
+  return { title, cards, workCount, chatTitle, chatClose, log, status, input, steer, send, form, cardsKey: "", threadKey: "" };
 }
 
 async function togglePip() {
@@ -1789,8 +1787,7 @@ function syncPip() {
   const sendLabel = state.busy ? "설명 중단" : "묻기";
   ui.send.setAttribute("aria-label", sendLabel); ui.send.title = sendLabel;
   ui.steer.hidden = !(state.busy && state.draft.trim());
-  ui.chatTitle.textContent = chatOpen ? (state.focus?.card?.displayTitle ?? state.focus?.label ?? "세션 전체 대화") : "대화";
-  ui.chatChip.replaceChildren(...(chatOpen && state.focus?.card ? [catChip(state.focus.card.dataset.eventType)] : []));
+  ui.chatTitle.textContent = chatOpen && !state.focus?.card ? "세션 전체 대화" : "대화";
   ui.chatClose.hidden = !chatOpen;
   // 작업 내용(미니): 최신이 위. 카드 제목·즐겨찾기·선택이 바뀌면 다시 그린다.
   const cards = [...eventCards.values()].reverse(), selected = state.focus?.card ?? null;

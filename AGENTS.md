@@ -51,3 +51,4 @@
 - @docs/decisions/0030-light-learning-classification.md
 - @docs/decisions/0031-server-side-pre-explanation.md
 - @docs/decisions/0032-classify-after-answer-and-more-hosts.md
+- @docs/decisions/0033-card-output-as-first-message.md
