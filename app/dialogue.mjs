@@ -84,7 +84,7 @@ export function recentDialogue(records) {
 
 /** 설명 호출의 이번 질문 맥락. 이전 문답은 대화 자체에 이미 있다. */
 export function questionContext(focus) {
-	return `질문 대상(스레드의 시작 주제, 사용자가 고른 사건 카드, 데이터): ${focus ? JSON.stringify(focus) : "없음 — 세션 전체 대화"}
+	return `질문 대상(스레드의 시작 주제, 사용자가 고른 사건 카드, 데이터): ${focus ? JSON.stringify(focus) : "없음 (세션 전체 대화)"}
 이 스레드의 이전 대화가 가장 가까운 맥락이다. 질문이 직전 문답이나 다른 내용을 가리키면 질문 대상보다 그 흐름을 따른다. 사실은 현재 전사로 확인하고, 과거 답변은 인용 ID로 쓰지 않는다.`;
 }
 

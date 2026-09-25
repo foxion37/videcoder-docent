@@ -65,7 +65,7 @@ export function watchSession(path, provider, send) {
 		send({
 			kind: "warn",
 			code: "classifier-unavailable",
-			text: "의미 분류를 사용할 수 없어 분류하지 못한 메시지는 건너뛰어요. 명시적인 질문 도구로 보낸 질문은 계속 보이지만, 일반 문장의 질문·작업 결과·계획은 빠질 수 있어요.",
+			text: "의미 분류를 사용할 수 없어 분류하지 못한 메시지는 건너뛰어요. 명시적인 질문 도구로 보낸 질문은 계속 보이지만, 일반 문장의 질문, 작업 결과, 계획은 빠질 수 있어요.",
 			at: new Date().toISOString(),
 		});
 	};

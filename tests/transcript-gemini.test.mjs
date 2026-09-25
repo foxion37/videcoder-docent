@@ -71,7 +71,7 @@ test("gemini transcript shows user and assistant sections, tool calls and result
 	assert.ok(md.includes("## assistant"));
 	assert.ok(md.includes("원인을 찾아볼게요."));
 	assert.ok(md.includes("→ run_shell_command(npm test)"));
-	assert.ok(md.includes("⇒ run_shell_command ok · 2줄"));
+	assert.match(md, /⇒ run_shell_command ok\b.*2줄/);
 	assert.ok(md.includes("⇒ read_file 에러"));
 	assert.ok(md.includes("ENOENT: no such file or directory"));
 });

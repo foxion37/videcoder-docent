@@ -53,7 +53,7 @@
   #mainHeader > .t { flex:0 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:18px; font-weight:400 }
   .header-status { flex:1 1 auto; min-width:0; display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; color:var(--mute); font-size:13px }
   #sub { overflow-wrap:anywhere }
-  #refreshed { white-space:nowrap } #refreshed:not(:empty)::before { content:"·"; margin-right:8px }
+  #refreshed { white-space:nowrap } #refreshed:not(:empty) { margin-left:4px }
   .session-info { position:relative; font-size:13px }
   .session-info > summary { list-style:none; display:inline-flex; align-items:center; justify-content:center; gap:5px; height:26px; line-height:1; box-sizing:border-box; cursor:pointer; white-space:nowrap; font-size:13px; font-weight:600; color:var(--ink); border:1px solid var(--accent); background:var(--soft); border-radius:999px; padding:0 11px 0 8px }
   .session-info > summary svg { display:block }
@@ -79,7 +79,13 @@
   .badge { flex:none; display:inline-flex; align-items:center; justify-content:center; height:22px; font-size:12px; line-height:1; font-weight:600; padding:0 9px; border-radius:999px; color:var(--on-status); margin-top:3px }
   .badge.done{background:var(--done)} .badge.running{background:var(--run)} .badge.blocked{background:var(--blk)} .badge.none{display:none}
   .a .ex { margin:8px 0 0 } .a ul { margin:10px 0 0; padding-left:20px } .a li { margin:3px 0 }
-  .a .meta { color:var(--mute); font-size:12px; margin-top:10px }
+  .a .meta { color:var(--mute); font-size:12px; margin-top:14px }
+  /* 답 아래 영역: 본문 → 자세히 보기 → 행동 버튼 → 메타 순서로 한 단계씩 띄운다. 용어 뜻 찾기가 가장 중요한 행동이라 노란 바탕 검정 글씨. */
+  .a .answer-details { margin-top:24px }
+  .a .answer-details > summary { cursor:pointer; font-size:14px; font-weight:600; color:var(--accent-ink); padding:4px 0 }
+  .a .answer-actions { margin-top:22px; gap:8px 10px }
+  .control.term-find { background:var(--accent); border-color:var(--accent); color:#111; font-weight:650 }
+  .control.term-find:hover { border-color:#111 }
   .a.err { border-color:var(--blk); color:var(--blk) }
   .wait { color:var(--mute) } .wait::after { content:""; animation:dots 1.2s steps(4,end) infinite }
   @keyframes dots { 0%{content:""} 25%{content:"."} 50%{content:".."} 75%{content:"..."} }
@@ -232,7 +238,7 @@
   .pip-card-title { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
   .pip-fav { flex:none; display:block; width:14px; height:14px; color:var(--accent-ink) } .pip-fav svg { display:block; width:14px; height:14px; fill:var(--accent) }
   .pip-log { flex:1; min-height:0; overflow:auto; padding:10px 12px; display:flex; flex-direction:column; gap:10px }
-  .pip-log .a { padding:10px 12px; font-size:13px } .pip-log .a .head { font-size:15px } .pip-log .q { max-width:85%; font-size:13px }
+  .pip-log .a { padding:10px 12px; font-size:13px } .pip-log .markdown { font-size:14px } .pip-log .a .head { font-size:15px } .pip-log .q { max-width:85%; font-size:13px }
   .pip-log .empty { font-size:13px; padding:0 12px }
   .pip-foot { flex:none; padding:8px 10px 10px; border-top:1px solid var(--line) }
   .pip-status:not(:empty) { margin-bottom:6px }
@@ -464,7 +470,7 @@
         <li>지난 기록은 자동 요청하지 않음.</li>
         <li>모델 호출 비용 발생.</li>
         <li>10분에 최대 5개씩 차례로 처리.</li>
-        <li>자동 설명 켜기·끄기는 프로필에 저장됨.</li>
+        <li>자동 설명을 켜고 끈 상태는 프로필에 저장됨.</li>
       </ul>
       <p id="autoStatus" class="notice" role="status"></p>
     </section>
@@ -632,7 +638,7 @@ function excerpt(value, max = 6000) {
   const text = String(value ?? "");
   if (text.length <= max) return text;
   const half = Math.floor((max - 48) / 2);
-  return `${text.slice(0, half)}\n\n[중간 생략 — 전체 내용은 세션 전사에서 확인]\n\n${text.slice(-half)}`;
+  return `${text.slice(0, half)}\n\n[중간 생략, 전체 내용은 세션 전사에서 확인]\n\n${text.slice(-half)}`;
 }
 
 function answerTarget(answer) {
@@ -690,7 +696,7 @@ function openTerm(term, contextText, c, opener) {
   const request = button("이 맥락에서 풀이 요청", () => {
     if (!isCurrent(c) || state.busy || historyLoading) return;
     dialog.close();
-    ask(`"${excerpt(term.term, 200)}"이라는 용어가 이 내용에서 어떤 뜻이고 왜 필요한지 쉬운 말로 설명해줘.`, { difficulty: "EASY", displayQuestion: `용어 풀이 · ${excerpt(term.term, 200)}` });
+    ask(`"${excerpt(term.term, 200)}"이라는 용어가 이 내용에서 어떤 뜻이고 왜 필요한지 쉬운 말로 설명해줘.`, { difficulty: "EASY", displayQuestion: `용어 풀이: ${excerpt(term.term, 200)}` });
   }, "control event-ask");
   request.disabled = state.busy || historyLoading;
   actions.append(request, button("내 용어 사전 열기", () => {
@@ -983,13 +989,23 @@ function codePreview(code) {
   return wrap;
 }
 
-/** 도구 결과는 줄 그대로(고정폭), 에이전트·사용자·시스템 원문은 Markdown(굵게·표·목록·코드)으로 그린다. */
+const SOURCE_ROLE = { user: "사용자가 보낸 메시지", assistant: "에이전트가 쓴 메시지", tool: "도구 실행 결과", system: "시스템 기록" };
+const SOURCE_TIME = new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+/** 원문 출처를 사람이 읽는 말로. 예: "에이전트가 쓴 메시지 (9월 26일 오전 11:30)". 서브에이전트면 이름을 앞에 붙인다. */
+function sourceLabel(entry) {
+  const who = `${entry.agent ? `서브에이전트 ${entry.agent}의 ` : ""}${SOURCE_ROLE[entry.role] ?? "기록"}`;
+  const time = entry.timestamp ? new Date(entry.timestamp) : null;
+  return time && Number.isFinite(time.getTime()) ? `${who} (${SOURCE_TIME.format(time)})` : who;
+}
+
+/** 도구 결과는 줄 그대로(고정폭), 에이전트, 사용자, 시스템 원문은 Markdown(굵게, 표, 목록, 코드)으로 그린다. */
 function evidenceBlock(title, entry, selected = false, c = capture()) {
   const block = el("section", `evidence-block${selected ? " selected" : ""}`);
   block.append(el("h3", null, title));
   if (entry) {
     const text = entry.text ?? entry.excerpt ?? "";
-    block.append(el("div", "notice", [entry.role, entry.agent, entry.timestamp].filter(Boolean).join(" · ")));
+    block.append(el("div", "notice", sourceLabel(entry)));
     block.append(entry.role === "tool" ? el("pre", null, text) : markdown(text, c, {}, "evidence-original"));
   }
   return block;
@@ -1017,14 +1033,14 @@ async function openEvidence(citation, c = capture(), opener = null) {
     if (result.message) body.append(el("p", "notice", result.message));
     if (result.available) {
       for (const entry of result.before ?? []) body.append(evidenceBlock("바로 앞 기록", entry, false, c));
-      body.append(evidenceBlock("현재 원문 — 설명에 쓴 부분", result.selected, true, c));
+      body.append(evidenceBlock("설명에 쓴 부분 (현재 원문)", result.selected, true, c));
       for (const entry of result.after ?? []) body.append(evidenceBlock("바로 뒤 기록", entry, false, c));
-    } else if (result.selected) body.append(evidenceBlock("서버가 확인한 저장 발췌 — 원문은 연결되지 않음", result.selected, true, c));
+    } else if (result.selected) body.append(evidenceBlock("저장해 둔 발췌 (현재 원문과는 연결되지 않음)", result.selected, true, c));
     body.append(evidenceBlock("답변 당시 저장한 발췌", citation, false, c));
   } catch (e) {
     if (!isCurrent(c) || request !== evidenceRequest) return;
     clearSurface(body);
-    body.append(el("p", "notice", `원문을 확인하지 못했어요: ${e.message}`), evidenceBlock("답변 당시 저장한 발췌 — 현재 원문 미확인", citation, false, c), button("원문 다시 확인", () => openEvidence(citation, c, opener)));
+    body.append(el("p", "notice", `원문을 확인하지 못했어요: ${e.message}`), evidenceBlock("답변 당시 저장한 발췌 (현재 원문은 확인하지 못함)", citation, false, c), button("원문 다시 확인", () => openEvidence(citation, c, opener)));
   }
 }
 
@@ -1068,11 +1084,11 @@ function renderSessions() {
     meta.append(el("span", "session-meta project", s.project));
     meta.append(el("span", "session-meta platform", s.provider));
     if (s.host) meta.append(el("span", "session-meta host", s.host));
-    meta.append(el("span", `session-meta ${live ? "activity" : "time"}`, `${live ? "최근 활동 · " : ""}${rel(s.updated)}`));
+    meta.append(el("span", `session-meta ${live ? "activity" : "time"}`, `${live ? "최근 활동, " : ""}${rel(s.updated)}`));
     b.append(meta);
     box.append(b);
   }
-  if (matches.length > limit) box.append(button(`더 보기 · ${matches.length - limit}개 남음`, () => {
+  if (matches.length > limit) box.append(button(`더 보기 (${matches.length - limit}개 남음)`, () => {
     sessionLimit = limit + SESSION_PAGE; renderSessions();
     box.querySelectorAll(".sess")[limit]?.focus();
   }, "pill more-sessions"));
@@ -1083,7 +1099,7 @@ async function select(s) {
   showChat(); invalidateContext(); current = s; historyLoading = true;
   const c = capture(); remember("session", s.id); renderSessions();
   $("#title").textContent = s.title; $("#title").title = s.title;
-  $("#sub").textContent = `${s.project} · ${s.provider}${s.host ? ` · ${s.host}` : ""}`;
+  $("#sub").textContent = `${s.project}, ${s.provider}${s.host ? `, ${s.host}` : ""}`;
   const info = el("details", "session-info");
   const infoSummary = el("summary");
   infoSummary.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.5" r=".6" fill="currentColor"/></svg>';
@@ -1209,7 +1225,7 @@ function threadSource(key, c) {
 
 function optionList(options, c) {
   const ul = el("ul");
-  for (const option of options) { const item = el("li"); item.append(markdown(option.description ? `${option.label} — ${option.description}` : option.label, c)); ul.append(item); }
+  for (const option of options) { const item = el("li"); item.append(markdown(option.description ? `${option.label}: ${option.description}` : option.label, c)); ul.append(item); }
   return ul;
 }
 
@@ -1439,11 +1455,11 @@ function renderAnswer(r, c = capture(), compact = false) {
   }
   const actions = el("div", "card-actions answer-actions");
   if (!compact) actions.append(
-    button("용어 뜻 찾기", (event) => chooseTerm(r, c, event.currentTarget)),
+    button("용어 뜻 찾기", (event) => chooseTerm(r, c, event.currentTarget), "control term-find"),
   );
   for (const citation of r.citations ?? []) {
     if (!citation.id || !citation.sessionId) continue;
-    actions.append(button(`원문 보기 · ${citation.label || citation.role || "기록"}`, (event) => {
+    actions.append(button(`원문 보기: ${sourceLabel(citation)}`, (event) => {
       openEvidence(citation, c, compact ? null : event.currentTarget);
       if (compact) window.focus();
     }, "control evidence-link"));
@@ -1453,7 +1469,7 @@ function renderAnswer(r, c = capture(), compact = false) {
   if (actions.childElementCount) a.append(actions);
   const depthSource = { question: "바로 질문", domain: "영역별 설정", profile: "기본값" }[r.difficultySource];
   const requestedModel = r.model === null ? "omp 기본 모델" : typeof r.model === "string" ? r.model : null;
-  a.append(el("div", "meta", [r.difficulty ? `설명 모드 ${r.difficulty}${depthSource ? ` (${depthSource})` : ""}` : "", requestedModel ? `요청 모델: ${requestedModel}` : "", Number.isFinite(r.ms) ? `${Math.round(r.ms / 1000)}초` : ""].filter(Boolean).join(" · ")));
+  a.append(el("div", "meta", [r.difficulty ? `설명 모드 ${r.difficulty}${depthSource ? ` (${depthSource})` : ""}` : "", requestedModel ? `요청 모델: ${requestedModel}` : "", Number.isFinite(r.ms) ? `${Math.round(r.ms / 1000)}초 걸림` : ""].filter(Boolean).join(", ")));
   return a;
 }
 

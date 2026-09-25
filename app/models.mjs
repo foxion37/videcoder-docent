@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 
 const OMP_BIN = process.env.OMP_BIN ?? "omp";
-const BILLING_NOTICE = "OMP 모델 카탈로그의 입력·출력 단가는 USD / 100만 토큰 기준 참고값이에요. 연결·인증 또는 실제 청구액을 보장하지 않으며, 0도 무료를 뜻하지 않아요. 구독 포함량·캐시·가격 구간에 따라 실제 비용이 달라질 수 있어요.";
+const BILLING_NOTICE = "OMP 모델 카탈로그의 입력, 출력 단가는 USD / 100만 토큰 기준 참고값이에요. 연결, 인증 또는 실제 청구액을 보장하지 않으며, 0도 무료를 뜻하지 않아요. 구독 포함량, 캐시, 가격 구간에 따라 실제 비용이 달라질 수 있어요.";
 const catalogError = () => Object.assign(new Error("OMP 모델 카탈로그를 읽지 못했어요. 설치와 모델 설정을 확인해 주세요. 요청 내용과 비밀값 보호를 위해 원시 실행 로그는 표시하거나 저장하지 않아요."), { status: 502 });
 
 function catalogCost(cost) {

@@ -38,7 +38,7 @@ export function askQuestionLines(questions) {
 		const recommended = Number.isSafeInteger(q.recommended) ? q.recommended : -1;
 		for (const [index, o] of (q.options ?? []).entries()) {
 			if (!o || typeof o !== "object") continue;
-			const desc = typeof o.description === "string" && o.description ? ` — ${o.description.slice(0, OPTION_DESC_MAX)}` : "";
+			const desc = typeof o.description === "string" && o.description ? `: ${o.description.slice(0, OPTION_DESC_MAX)}` : "";
 			out.push(`    - ${String(o.label ?? "")}${desc}${index === recommended ? " (추천)" : ""}`);
 		}
 	}

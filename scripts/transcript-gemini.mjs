@@ -152,7 +152,7 @@ export function normalizeGeminiSession(jsonl, source = "", projectRoot = null) {
 			const summary =
 				call.name === ASK_TOOL
 					? `⇒ ${call.name} 사용자 답:\n  ${clip(body, USER_MAX).split("\n").join("\n  ")}`
-					: `⇒ ${call.name} ok · ${body ? body.split("\n").length : 0}줄`;
+					: `⇒ ${call.name} ok, ${body ? body.split("\n").length : 0}줄`;
 			out.push(mark(msg, summary, { role: "tool", part: resultPart }));
 		} else {
 			out.push("  (결과 없음)");

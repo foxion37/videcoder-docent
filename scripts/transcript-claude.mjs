@@ -136,7 +136,7 @@ const toolBlocks = (entry, call, results, mark, prefix = "") => {
 	let summary;
 	if (r.is_error) summary = `⇒ ${call.name} 에러\n  ${body.split("\n").slice(0, ERROR_LINES).join("\n  ")}`;
 	else if (call.name === "AskUserQuestion") summary = `⇒ ${call.name} 사용자 답:\n  ${clip(body, USER_MAX).split("\n").join("\n  ")}`;
-	else summary = `⇒ ${call.name} ok · ${n}줄`;
+	else summary = `⇒ ${call.name} ok, ${n}줄`;
 	out.push(mark(found.entry, summary.split("\n").map((line) => prefix + line).join("\n"), { role: "tool", part: `result:${call.id}`, original: r }));
 	return out;
 };

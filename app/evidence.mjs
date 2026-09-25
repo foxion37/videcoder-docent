@@ -68,7 +68,7 @@ function sourceFor(frame, sessionId, id, block) {
 	const timestamp = safeMeta(meta.timestamp, 100);
 	const roleLabel = { user: "사용자", assistant: "에이전트", tool: "도구 결과", system: "시스템" }[meta.role] ?? meta.role;
 	return {
-		id, sessionId, label: [agent, roleLabel, timestamp].filter(Boolean).join(" · "),
+		id, sessionId, label: [agent, roleLabel, timestamp].filter(Boolean).join(", "),
 		text, excerpt: text.slice(0, EXCERPT_MAX), role: meta.role,
 		...(timestamp ? { timestamp } : {}), ...(agent ? { agent } : {}),
 		...(meta.legacy ? { legacy: true } : {}),

@@ -51,7 +51,7 @@ export function normalizeOmpSession(jsonl, source = "") {
 		let summary;
 		if (r.isError) summary = `⇒ ${call.name} 에러\n  ${body.split("\n").slice(0, ERROR_LINES).join("\n  ")}`;
 		else if (call.name === "ask") summary = `⇒ ${call.name} 사용자 답:\n  ${clip(body, USER_MAX).split("\n").join("\n  ")}`;
-		else summary = `⇒ ${call.name} ok · ${n}줄`;
+		else summary = `⇒ ${call.name} ok, ${n}줄`;
 		out.push(mark(result, summary, { role: "tool", part: call.id ?? "result" }));
 		return out;
 	};
@@ -89,7 +89,7 @@ export function normalizeOmpSession(jsonl, source = "") {
 			}
 		} else if (e.type === "compaction") {
 			section("system");
-			out.push(mark(e, "(여기서 이전 대화가 요약·압축됨)", { role: "system" }));
+			out.push(mark(e, "(여기서 이전 대화가 요약되고 압축됨)", { role: "system" }));
 		} else if (e.type === "model_change") {
 			section("system");
 			out.push(mark(e, `(모델: ${e.model})`, { role: "system" }));

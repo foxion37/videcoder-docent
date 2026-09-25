@@ -72,7 +72,7 @@ test("codex normalize renders header, roles, tool call and result lines", () => 
 	assert.ok(md.includes("로그 파일에서 에러 찾아줘"));
 	assert.ok(md.includes("로그를 살펴보겠습니다."));
 	assert.match(md, /→ exec\(tail -50 app\.log\)/);
-	assert.match(md, /⇒ exec ok · \d+줄/);
+	assert.match(md, /⇒ exec ok\b.*\d+줄/);
 	assert.match(md, /⇒ exec 에러\n {2}Script failed/);
 	assert.ok(md.includes("(모델: gpt-9-test)"));
 	// 주입 컨텍스트와 reasoning 은 전사에 나오지 않는다
@@ -155,7 +155,7 @@ test("codex compacted and aborted render as system lines", () => {
 			{ type: "event_msg", payload: { type: "turn_aborted", turn_id: "t", reason: "interrupted" } },
 		]),
 	);
-	assert.ok(md.includes("(여기서 이전 대화가 요약·압축됨)"));
+	assert.match(md, /이전 대화가 요약.*압축/);
 	assert.ok(md.includes("(사용자가 실행을 중단함: interrupted)"));
 });
 

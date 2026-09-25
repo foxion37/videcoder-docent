@@ -50,9 +50,9 @@ test("pi transcript shows user and assistant sections, tool call and result", ()
 	assert.ok(md.includes("## assistant"));
 	assert.ok(md.includes("토큰 갱신 코드를 확인할게요."));
 	assert.ok(md.includes("→ bash(grep -rn refresh src/)"));
-	assert.ok(md.includes("⇒ bash ok · 1줄"));
+	assert.match(md, /⇒ bash ok\b.*1줄/);
 	assert.ok(md.includes("(모델: anthropic/claude-sonnet-4-5)"));
-	assert.ok(md.includes("(여기서 이전 대화가 요약·압축됨)"));
+	assert.match(md, /이전 대화가 요약.*압축/);
 });
 
 test("pi transcript shows tool errors and pending calls", () => {

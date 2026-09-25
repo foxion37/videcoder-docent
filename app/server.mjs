@@ -363,7 +363,7 @@ function classifyLater({ context, response, startedAt, model, sessionId, thread,
 			plan = parsePlan(await runner.once({ system: plannerPrompt, task: planningInput(context, response), model }), context);
 		} catch {
 			// 선택한 모델이 실패해도 다른 모델로 바꾸지 않는다. 분류를 추측하지 않고 알 수 없음으로 남긴다.
-			plan = { ...parsePlan("", context), warning: "학습 분류를 실행하지 못했어요. 개념·분야를 추측하지 않았어요." };
+			plan = { ...parsePlan("", context), warning: "학습 분류를 실행하지 못했어요. 개념, 분야를 추측하지 않았어요." };
 		}
 		const suggested = plan.card && plan.card !== thread ? cards.find((card) => card.thread === plan.card) : null;
 		const answer = await applyClassification(context, response.recordId, plan, startedAt, suggested ? { suggest: suggested } : {});

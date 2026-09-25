@@ -154,7 +154,7 @@ export function normalizeCodexSession(jsonl, source = "") {
 		let summary;
 		if (isErrorOutput(result.payload.output)) summary = `⇒ ${call.name} 에러\n  ${body.split("\n").slice(0, ERROR_LINES).join("\n  ")}`;
 		else if (isAsk(call)) summary = `⇒ ${call.name} 사용자 답:\n  ${clip(body, USER_MAX).split("\n").join("\n  ")}`;
-		else summary = `⇒ ${call.name} ok · ${n}줄`;
+		else summary = `⇒ ${call.name} ok, ${n}줄`;
 		out.push(mark(result, summary, { role: "tool", part: `result:${call.call_id ?? call.id}` }));
 		return out;
 	};
@@ -195,7 +195,7 @@ export function normalizeCodexSession(jsonl, source = "") {
 			out.push(...toolLines(e, p, `tool:${p.call_id ?? p.id}`));
 		} else if (e.type === "compacted") {
 			section("system");
-			out.push(mark(e, "(여기서 이전 대화가 요약·압축됨)", { role: "system", part: `compacted:${e.ordinal ?? ""}` }));
+			out.push(mark(e, "(여기서 이전 대화가 요약되고 압축됨)", { role: "system", part: `compacted:${e.ordinal ?? ""}` }));
 		} else if (e.type === "event_msg" && p?.type === "turn_aborted") {
 			section("system");
 			out.push(mark(e, `(사용자가 실행을 중단함${p.reason ? `: ${p.reason}` : ""})`, { role: "system", part: `aborted:${p.turn_id ?? e.ordinal ?? ""}` }));
