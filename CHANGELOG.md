@@ -2,6 +2,11 @@
 
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/). 버전은 [SemVer](https://semver.org/lang/ko/). 0.x 동안은 minor 가 새 기능, patch 가 고침.
 
+## [0.16.8] — 2026-09-25
+
+### 추가
+- 개발용 디자인 검사 `npm run check:design`: 실제 Chrome에서 표본 답과 입력창을 그려 본문 크기, 행간, 제목과 본문 사이, 문단 사이, 묶음 사이, 목록 간격, 자간, 소제목 크기, 한 줄 글자 수, 답 아래 영역, 용어 뜻 찾기 강조, 입력창 버튼 정렬(한 줄, 여러 줄, 바로잡기 표시 중) 14개 규칙을 검사. `TYPESAFE_API_KEY`가 있으면 같은 기준을 Jev로도 판정. 화면을 고칠 때 돌리도록 AGENTS.md와 CONTRIBUTING.md에 규칙 추가. 배포 패키지에는 넣지 않음.
+
 ## [0.16.7] — 2026-09-25
 
 ### 변경

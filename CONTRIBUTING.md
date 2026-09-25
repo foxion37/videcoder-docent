@@ -16,6 +16,7 @@ npm ci            # package-lock.json 기준 설치
 npm run build     # app/assets/ 프런트엔드 자산 생성 (커밋 대상)
 npm start         # = node app/server.mjs → http://127.0.0.1:4747
 node --test tests/*.test.mjs   # 2초 안에 끝나는 회귀 검사
+npm run check:design          # 화면을 고쳤을 때: 실제 Chrome에서 글자, 여백, 정렬 규칙 검사
 ```
 
 `app/assets/`는 커밋한다. 실행 중 CDN을 쓰지 않기 때문이고(ADR 0015), CI가 빌드 결과를 다시 만들어 커밋된 것과 같은지 본다. `app/assets/docent-markdown.js`를 손으로 고치지 말고 `app/markdown.jsx`를 고친 뒤 `npm run build`를 돌린다.
@@ -45,6 +46,7 @@ DOCENT_HOME=/tmp/docent-dev DOCENT_PORT=4803 DOCENT_PEERS= npm start
 - `node --test tests/*.test.mjs` — 근거 표시·학습 기억·슬롯 파싱·용어집 같은 결정적 로직을 검사한다. 빠르므로 PR 전에 돌린다.
 - 이 테스트는 **실제 모델 호출과 브라우저 동작을 검증하지 않는다.** 의미 분류·난이도·재설명은 실제 omp로, 작은 창(PiP)은 실제 브라우저로 확인해야 한다. 어떤 검증을 했는지 PR에 적는다.
 - 버그를 고칠 때는 재현이 먼저다. 같은 버그가 다시 나면 실패하는 테스트가 정말 남길 가치가 있는지 따져 보고, 아니면 일회성 스크립트로 확인한다.
+- `npm run check:design` — 화면(CSS, 레이아웃, 여백)을 고쳤을 때 돌린다. 실제 Chrome을 띄워 표본 답과 입력창을 그리고, 본문 크기, 행간, 제목과 본문 사이, 문단 사이, 묶음 사이, 목록 간격, 자간, 한 줄 글자 수, 답 아래 영역, 버튼 정렬을 잰다. 기준은 KRDS, 토스 TDS, 당근 SEED, WCAG 1.4.8의 한글 본문 수치다. `TYPESAFE_API_KEY`가 있으면 같은 기준을 Jev로도 판정하고, 수치와 Jev 둘 다 통과해야 성공이다. Chrome 경로는 `CHROME_BIN`으로 바꿀 수 있다. 기준을 바꾸려면 `scripts/check-design.mjs`의 규칙 표를 고치고 이유를 CHANGELOG에 적는다.
 - 포매터·린터 전체 실행은 하지 않는다. 주변 코드 스타일(들여쓰기 탭, 문자열은 겹따옴표·백틱)을 따른다.
 
 ## 라이선스
@@ -55,6 +57,7 @@ DOCENT_HOME=/tmp/docent-dev DOCENT_PORT=4803 DOCENT_PEERS= npm start
 
 - [ ] `node --test tests/*.test.mjs` 통과
 - [ ] 프런트엔드를 고쳤으면 `npm run build` 후 `app/assets/` 변경분 포함
+- [ ] 화면을 고쳤으면 `npm run check:design` 통과 (가능하면 `TYPESAFE_API_KEY`로 Jev 판정까지)
 - [ ] 서버를 띄워 고친 경로를 실제로 한 번 써 봤다(수동 확인 내용을 적는다)
 - [ ] `prompt/docent.md`를 고쳤으면 `scripts/install-omp.sh` 재실행 안내도 함께
 - [ ] `CHANGELOG.md`에 한 줄 추가
