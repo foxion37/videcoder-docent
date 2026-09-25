@@ -55,7 +55,7 @@ async function replay(path, size, provider, send, warnReduced) {
  */
 export function watchSession(path, provider, send) {
 	let offset = -1; // -1: 첫 stat 에서 꼬리를 재생하고 EOF 로 맞춤
-	let remainder = "";
+	let remainder = Buffer.alloc(0); // 아직 줄이 끝나지 않은 바이트. 글자 중간에서 잘려도 다음 읽기와 합쳐 디코딩한다
 	let stopped = false;
 	let busy = false;
 	let reducedReported = false;
@@ -85,7 +85,7 @@ export function watchSession(path, provider, send) {
 			}
 			if (st.size < offset) {
 				offset = 0; // 파일이 새로 쓰였음
-				remainder = "";
+				remainder = Buffer.alloc(0);
 			}
 			if (st.size === offset) return;
 			const fh = await open(path, "r");
@@ -93,14 +93,15 @@ export function watchSession(path, provider, send) {
 			try {
 				const buf = Buffer.alloc(st.size - offset);
 				const { bytesRead } = await fh.read(buf, 0, buf.length, offset);
-				chunk = remainder + buf.subarray(0, bytesRead).toString("utf8");
+				chunk = Buffer.concat([remainder, buf.subarray(0, bytesRead)]);
 				offset += bytesRead;
 			} finally {
 				await fh.close();
 			}
-			const nl = chunk.lastIndexOf("\n");
-			remainder = nl >= 0 ? chunk.slice(nl + 1) : chunk;
-			const complete = nl >= 0 ? chunk.slice(0, nl + 1) : "";
+			// 줄바꿈 바이트(0x0a)는 여러 바이트 글자 안에 나오지 않으므로 여기서 자르면 글자가 깨지지 않는다.
+			const nl = chunk.lastIndexOf(0x0a);
+			remainder = nl >= 0 ? chunk.subarray(nl + 1) : chunk;
+			const complete = nl >= 0 ? chunk.subarray(0, nl + 1).toString("utf8") : "";
 			if (!complete) return;
 			for (const ev of provider.events(provider.parse(complete))) {
 				const selected = await filterEvent(ev, warnReduced);

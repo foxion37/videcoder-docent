@@ -67,8 +67,10 @@
   .header-actions { flex:none; display:flex; align-items:center; gap:8px }
   .auto { display:flex; align-items:center; gap:4px; flex:none; color:var(--mute); font-size:13px; white-space:nowrap; cursor:pointer }
   .auto input { flex:none; margin:0; padding:0 }
-  #log { flex:1; overflow:auto; padding:14px 22px; display:flex; flex-direction:column; gap:14px }
+  #log { flex:1; overflow:auto; padding:20px 22px; display:flex; flex-direction:column; gap:28px }
   .thread-source { flex:none; align-self:stretch; box-sizing:border-box; background:var(--pane-work); border:1px solid var(--line); border-radius:12px; padding:12px 16px }
+  /* 대화의 출력 칸(AI 출력·도슨트 답)은 오른쪽 아래 손잡이로 크기를 바꿀 수 있다. 줄어들지 않도록 flex:none. */
+  #log .a, #log .thread-source { flex:none; overflow:auto; resize:both; min-width:240px; min-height:48px }
   .thread-source-head { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:12px; font-weight:600; color:var(--mute) }
   .thread-source ul { margin:8px 0 0; padding-left:20px } .thread-source li { margin:3px 0 }
   .q { align-self:flex-end; background:var(--soft); padding:8px 12px; border-radius:14px 14px 2px 14px; max-width:70% }
@@ -186,13 +188,18 @@
   .a, .q { white-space:pre-wrap; overflow-wrap:anywhere }
   .a .ex, .a li { white-space:pre-wrap }
   .a details { margin-top:10px }
-  #evidencePanel { position:fixed; z-index:20; top:0; right:0; bottom:0; width:min(560px, 100%); background:var(--panel); border-left:1px solid var(--line); box-shadow:-8px 0 30px #0003; display:flex; flex-direction:column }
+  /* 원문 보기: 왼쪽 서랍. 세션 목록 + 작업 내용 칸을 덮고 대화는 그대로 보인다(--evidence-w 는 열 때 계산). */
+  #evidencePanel { position:fixed; z-index:20; top:0; left:0; bottom:0; width:var(--evidence-w, min(560px, 100%)); max-width:100%; box-sizing:border-box; background:var(--panel); border-right:1px solid var(--line); box-shadow:8px 0 30px #0003; display:flex; flex-direction:column; animation:drawer-in .22s ease-out }
+  @keyframes drawer-in { from { transform:translateX(-100%) } }
   #evidencePanel header { padding:14px 16px }
   #evidenceBody { overflow:auto; padding:16px; flex:1 }
   .evidence-block { margin:12px 0; border:1px solid var(--line); border-radius:8px; padding:12px }
-  .evidence-block p { white-space:pre-wrap; overflow-wrap:anywhere }
+  .evidence-block p { overflow-wrap:anywhere }
   .evidence-block.selected { border-color:var(--accent) }
-  .evidence-block pre { white-space:pre-wrap; overflow-wrap:anywhere; font:13px/1.6 ui-monospace, monospace; margin:8px 0 0 }
+  /* 에이전트·사용자 원문은 Markdown으로 그린다. 한 줄 바꿈도 원문처럼 살린다. Nerd Font 기호는 설치된 글꼴로 보인다. */
+  .evidence-original { margin-top:8px; font-family:"Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo", "Symbols Nerd Font", "Symbols Nerd Font Mono", "JetBrainsMono Nerd Font", "MesloLGS NF", "Hack Nerd Font", sans-serif }
+  .evidence-original p, .evidence-original li { white-space:pre-line }
+  .evidence-block pre { white-space:pre-wrap; overflow-wrap:anywhere; font:13px/1.6 ui-monospace, "Symbols Nerd Font Mono", "JetBrainsMono Nerd Font", "MesloLGS NF", monospace; margin:8px 0 0 }
   .evidence-block h3 { margin:0; font-size:14px }
   .event-heading { display:flex; align-items:center; gap:8px; margin-bottom:6px; color:var(--mute); font-size:12px }
   .event-new { display:inline-flex; align-items:center; height:22px; line-height:1; color:var(--activity); font-size:11px; font-weight:650 }
@@ -263,10 +270,11 @@
   #flow { flex:1; overflow:auto; padding:14px; display:flex; flex-direction:column; gap:10px }
   #flow .ev { max-width:none }
   .q-focus { display:block; font-size:12px; color:var(--mute); margin-bottom:2px }
-  .composer { display:flex; align-items:center; gap:6px; padding:5px 5px 5px 4px; border:1px solid var(--line); border-radius:24px; background:var(--btn) }
+  .composer { display:flex; align-items:flex-end; gap:6px; padding:5px 5px 5px 4px; border:1px solid var(--line); border-radius:24px; background:var(--btn) }
   .composer:focus-within { border-color:var(--accent) }
-  .composer input { flex:1; min-width:0; border:0; background:none; padding:8px 10px }
-  .composer input:focus-visible { outline:none }
+  .composer textarea { flex:1; min-width:0; box-sizing:border-box; height:37px; max-height:160px; resize:none; overflow-y:auto; border:0; border-radius:0; background:none; padding:8px 10px; line-height:1.5 }
+  .composer textarea:focus-visible { outline:none }
+  .q-text { white-space:pre-wrap }
   .composer .send { flex:none; display:grid; place-items:center; width:34px; height:34px; padding:0; border:0; border-radius:50%; background:var(--accent); color:var(--on-accent); cursor:pointer }
   .send svg { width:18px; height:18px }
   .explain-menu { position:relative }
@@ -286,7 +294,6 @@
   .draft-notice:empty { display:none }
   .draft-notice .control { padding:3px 8px; font-size:12px }
   .steer-btn { flex:none; white-space:nowrap }
-  .pending-answer .wait { margin:0 }
   /* 카테고리 색과 아이콘 */
   :root { --cat-question:light-dark(#b45309,#f3a64d); --cat-result:light-dark(#15803d,#6fd08f); --cat-plan:light-dark(#4f46e5,#a9a6f8); --pane-work:light-dark(#efeee9,#111111) }
   .cat { --cat:var(--mute); display:inline-flex; align-items:center; justify-content:center; gap:4px; height:22px; font-size:12px; line-height:1; font-weight:600; color:var(--cat); background:color-mix(in srgb, var(--cat) 13%, transparent); border-radius:999px; padding:0 9px 0 7px; white-space:nowrap }
@@ -328,7 +335,7 @@
   .chat-body { flex:1; min-height:0; display:flex; flex-direction:column }
   .chat-body.enter { animation:chatIn .32s ease both }
   @keyframes chatIn { from { opacity:0; transform:translateX(28px) } to { opacity:1; transform:none } }
-  @media (prefers-reduced-motion:reduce) { body, #workspace { transition:none } .chat-body.enter { animation:none } }
+  @media (prefers-reduced-motion:reduce) { body, #workspace { transition:none } .chat-body.enter, #evidencePanel { animation:none } }
   @media (min-width:1001px) { #flowPane > :not(.resizer) { min-width:var(--work-size, 380px) } }
   @media (max-width:1000px) {
     #workspace { grid-template-columns:minmax(0, 1fr); grid-template-rows:minmax(140px, 35%) minmax(0, 1fr); transition:none }
@@ -386,7 +393,7 @@
         <div id="queueList" class="queue-list"></div>
         <div id="askStatus" class="notice" role="status"></div>
         <form id="form" class="composer">
-          <input id="q" placeholder="궁금한 걸 물어보세요" aria-label="도슨트에게 물어볼 질문" autocomplete="off" disabled />
+          <textarea id="q" rows="1" placeholder="궁금한 걸 물어보세요 (Shift+Enter 줄바꿈)" aria-label="도슨트에게 물어볼 질문" autocomplete="off" disabled></textarea>
           <details id="explainMenu" class="explain-menu"><summary>바로 질문</summary><div class="chips" id="chips"></div></details>
           <button id="steer" class="control steer-btn" type="button" hidden>지금 바로잡기</button>
           <button id="send" class="send" aria-label="묻기" title="묻기" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
@@ -541,16 +548,62 @@ function applyTheme() {
 }
 
 function setDraft(value, focus = false) {
-  state.draft = value;
+  state.draft = toDisplay(value);
   syncComposer();
   if (focus && !$("#q").disabled) $("#q").focus();
+}
+
+// 입력창 목록: 줄 맨 앞 "- " 는 "• " 불릿으로 보이고, 보낼 때는 Markdown "- " 로 되돌린다. "1. " 은 번호 문단이다.
+const toMarkdown = (text) => String(text ?? "").replace(/^([ \t]*)• /gm, "$1- ");
+const toDisplay = (text) => String(text ?? "").replace(/^([ \t]*)- /gm, "$1• ");
+
+/** 입력창 높이를 내용에 맞춘다(최대 약 6줄, 넘치면 입력창 안에서 스크롤). */
+function fitComposer(input) {
+  if (!input) return;
+  input.style.height = "auto";
+  input.style.height = `${Math.min(input.scrollHeight, 160)}px`;
+}
+
+/** 줄 맨 앞에서 "-" 다음 스페이스를 치면 불릿 문단으로 바꾼다. 커서 위치는 그대로다. */
+function composerInput(event) {
+  const input = event.currentTarget;
+  if (event.inputType === "insertText" && event.data === " ") {
+    const caret = input.selectionStart, start = input.value.lastIndexOf("\n", caret - 1) + 1;
+    const head = /^([ \t]*)- $/.exec(input.value.slice(start, caret));
+    if (head) input.setRangeText(`${head[1]}• `, start, caret, "end");
+  }
+  fitComposer(input);
+  setDraft(input.value);
+}
+
+/**
+ * Enter 보내기(설명 중이면 대기 질문), ⌘/Ctrl+Enter 바로잡기, Shift+Enter 줄바꿈.
+ * 번호·불릿 문단에서 Shift+Enter 는 다음 번호·불릿을 이어 쓰고, 빈 항목에서 누르면 목록을 끝낸다. 한글 조합 중 Enter 는 건드리지 않는다.
+ */
+function composerKeydown(event) {
+  if (event.key !== "Enter" || event.isComposing || event.keyCode === 229) return;
+  const input = event.currentTarget;
+  event.preventDefault();
+  if (event.metaKey || event.ctrlKey) {
+    if (state.busy && state.draft.trim()) steerActiveAsk(); else submitDraft();
+    return;
+  }
+  if (!event.shiftKey) { submitDraft(); return; }
+  const caret = input.selectionStart, start = input.value.lastIndexOf("\n", caret - 1) + 1;
+  const line = input.value.slice(start, caret);
+  const numbered = /^([ \t]*)(\d+)\. (.*)$/.exec(line), bullet = /^([ \t]*)• (.*)$/.exec(line);
+  const item = numbered ? { indent: numbered[1], body: numbered[3], next: `${Number(numbered[2]) + 1}. ` } : bullet ? { indent: bullet[1], body: bullet[2], next: "• " } : null;
+  if (item && !item.body.trim() && input.selectionStart === input.selectionEnd) input.setRangeText(item.indent, start, caret, "end");
+  else input.setRangeText(`\n${item ? item.indent + item.next : ""}`, input.selectionStart, input.selectionEnd, "end");
+  fitComposer(input);
+  setDraft(input.value);
 }
 
 const SEND_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
 const STOP_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
 
 function syncComposer() {
-  if ($("#q").value !== state.draft) $("#q").value = state.draft;
+  if ($("#q").value !== state.draft) { $("#q").value = state.draft; fitComposer($("#q")); }
   $("#q").disabled = !current || !profilesReady || historyLoading;
   const send = $("#send");
   send.disabled = $("#q").disabled;
@@ -930,44 +983,53 @@ function codePreview(code) {
   return wrap;
 }
 
-function evidenceBlock(title, entry, selected = false) {
+/** 도구 결과는 줄 그대로(고정폭), 에이전트·사용자·시스템 원문은 Markdown(굵게·표·목록·코드)으로 그린다. */
+function evidenceBlock(title, entry, selected = false, c = capture()) {
   const block = el("section", `evidence-block${selected ? " selected" : ""}`);
   block.append(el("h3", null, title));
   if (entry) {
+    const text = entry.text ?? entry.excerpt ?? "";
     block.append(el("div", "notice", [entry.role, entry.agent, entry.timestamp].filter(Boolean).join(" · ")));
-    block.append(el("pre", null, entry.text ?? entry.excerpt ?? ""));
+    block.append(entry.role === "tool" ? el("pre", null, text) : markdown(text, c, {}, "evidence-original"));
   }
   return block;
+}
+
+/** 서랍 너비 = 대화 칸 왼쪽까지(세션 목록 + 작업 내용). 대화 칸이 없거나 좁으면 기본 너비. */
+function fitEvidenceDrawer() {
+  const chat = $("#chatPane");
+  const left = chat && !chat.closest("[hidden]") ? chat.getBoundingClientRect().left : 0;
+  document.documentElement.style.setProperty("--evidence-w", left >= 320 ? `${Math.round(left)}px` : "min(560px, 100%)");
 }
 
 async function openEvidence(citation, c = capture(), opener = null) {
   if (!isCurrent(c)) return;
   const request = ++evidenceRequest;
-  evidenceOpener = opener; $("#evidencePanel").hidden = false;
-  const body = $("#evidenceBody"); body.textContent = "";
-  body.append(el("p", "notice", "현재 원문을 확인하는 중이에요."), evidenceBlock("답변 당시 저장한 발췌", citation));
+  evidenceOpener = opener; fitEvidenceDrawer(); $("#evidencePanel").hidden = false;
+  const body = $("#evidenceBody"); clearSurface(body);
+  body.append(el("p", "notice", "현재 원문을 확인하는 중이에요."), evidenceBlock("답변 당시 저장한 발췌", citation, false, c));
   $("#evidenceClose").focus();
   try {
     const result = await api(scopedUrl("/api/evidence", c, { id: citation.sessionId, ref: citation.id }));
     if (!isCurrent(c) || request !== evidenceRequest || $("#evidencePanel").hidden) return;
-    body.textContent = "";
+    clearSurface(body);
     body.append(el("p", "notice", result.available ? "현재 원문에서 확인한 근거예요." : "현재 원문을 확인할 수 없어요. 저장된 발췌는 현재 원문이 아니에요."));
     if (result.message) body.append(el("p", "notice", result.message));
     if (result.available) {
-      for (const entry of result.before ?? []) body.append(evidenceBlock("바로 앞 기록", entry));
-      body.append(evidenceBlock("현재 원문 — 설명에 쓴 부분", result.selected, true));
-      for (const entry of result.after ?? []) body.append(evidenceBlock("바로 뒤 기록", entry));
-    } else if (result.selected) body.append(evidenceBlock("서버가 확인한 저장 발췌 — 원문은 연결되지 않음", result.selected, true));
-    body.append(evidenceBlock("답변 당시 저장한 발췌", citation));
+      for (const entry of result.before ?? []) body.append(evidenceBlock("바로 앞 기록", entry, false, c));
+      body.append(evidenceBlock("현재 원문 — 설명에 쓴 부분", result.selected, true, c));
+      for (const entry of result.after ?? []) body.append(evidenceBlock("바로 뒤 기록", entry, false, c));
+    } else if (result.selected) body.append(evidenceBlock("서버가 확인한 저장 발췌 — 원문은 연결되지 않음", result.selected, true, c));
+    body.append(evidenceBlock("답변 당시 저장한 발췌", citation, false, c));
   } catch (e) {
     if (!isCurrent(c) || request !== evidenceRequest) return;
-    body.textContent = "";
-    body.append(el("p", "notice", `원문을 확인하지 못했어요: ${e.message}`), evidenceBlock("답변 당시 저장한 발췌 — 현재 원문 미확인", citation), button("원문 다시 확인", () => openEvidence(citation, c, opener)));
+    clearSurface(body);
+    body.append(el("p", "notice", `원문을 확인하지 못했어요: ${e.message}`), evidenceBlock("답변 당시 저장한 발췌 — 현재 원문 미확인", citation, false, c), button("원문 다시 확인", () => openEvidence(citation, c, opener)));
   }
 }
 
 function closeEvidence(restoreFocus = true) {
-  evidenceRequest++; $("#evidencePanel").hidden = true; $("#evidenceBody").textContent = "";
+  evidenceRequest++; $("#evidencePanel").hidden = true; clearSurface($("#evidenceBody"));
   if (restoreFocus && evidenceOpener?.isConnected) evidenceOpener.focus();
   evidenceOpener = null;
 }
@@ -1223,7 +1285,7 @@ function toFlow(node) {
 function questionNode(text, focus) {
   const q = el("div", "q");
   if (focus?.label) q.append(el("span", "q-focus", focus.label));
-  q.append(el("span", null, text));
+  q.append(el("span", "q-text", toDisplay(text)));
   return q;
 }
 
@@ -1434,7 +1496,7 @@ function renderQueue() {
     box.replaceChildren();
     for (const job of pendingQueue) {
       const item = el("div", "queue-item");
-      item.append(el("span", "queue-text", job.displayQuestion || job.question));
+      item.append(el("span", "queue-text", toDisplay(job.displayQuestion || job.question)));
       item.append(button("고치기", () => {
         const i = pendingQueue.indexOf(job);
         if (i < 0) return;
@@ -1485,7 +1547,7 @@ async function cancelActiveAsk() {
 
 /** ⌘Enter·지금 바로잡기: 진행 중인 설명에 보정 문장을 보낸다. */
 async function steerActiveAsk() {
-  const job = activeAsk, message = state.draft.trim().slice(0, 2000);
+  const job = activeAsk, message = toMarkdown(state.draft).trim().slice(0, 2000);
   if (!job || !message || job.steering) return;
   job.steering = true;
   try {
@@ -1504,12 +1566,13 @@ function addSteerLine(job, message) {
   syncPip();
 }
 
-/** 스트림으로 흘러온 설명을 진행 중 말풍선에 그린다. 최대 100ms에 한 번 다시 그린다. */
+/** 스트림으로 흘러온 설명을 진행 중 말풍선에 그린다. 최대 100ms에 한 번 다시 그린다.
+ * 글이 오기 전의 진행 상태(분류·설명 중)는 입력창 위 상태 줄에만 보인다. 말풍선에 같은 문구를 다시 쓰지 않는다. */
 function fillBubble(job, bubble) {
   if (!bubble) return;
   clearSurface(bubble);
+  bubble.hidden = !job.text;
   if (job.text) bubble.append(markdown(job.text, job.context));
-  else bubble.append(el("div", "wait", STAGE_TEXT[job.stage] ?? "설명을 준비하는 중이에요."));
 }
 
 function scheduleBubble(job) {
@@ -1727,7 +1790,8 @@ function buildPip(doc, win = doc.defaultView) {
   const queueList = el("div", "queue-list"); queueList.id = "pipQueue";
   const menu = el("details", "explain-menu"), chips = el("div", "chips"); chips.id = "pipChips";
   menu.append(el("summary", null, "바로 질문"), chips); createActionChips(chips);
-  const form = el("form", "pip-form composer"), input = el("input"), steer = el("button", "control steer-btn"), send = el("button", "send");
+  const form = el("form", "pip-form composer"), input = el("textarea"), steer = el("button", "control steer-btn"), send = el("button", "send");
+  input.rows = 1;
   form.id = "pipForm"; input.id = "pipQ"; input.placeholder = "궁금한 걸 물어보세요"; input.autocomplete = "off"; input.setAttribute("aria-label", "도슨트에게 물어볼 질문");
   steer.id = "pipSteer"; steer.type = "button"; steer.hidden = true; steer.textContent = "지금 바로잡기";
   send.id = "pipSend"; send.type = "submit"; send.title = "묻기"; send.setAttribute("aria-label", "묻기"); send.innerHTML = SEND_SVG;
@@ -1749,10 +1813,8 @@ async function togglePip() {
     const style = doc.createElement("style"); style.textContent = document.querySelector("style").textContent.replaceAll('url("/assets/', `url("${location.origin}/assets/`); doc.head.append(style);
     const markdownStyle = doc.createElement("link"); markdownStyle.rel = "stylesheet"; markdownStyle.href = new URL("/assets/docent-markdown.css", location.href).href; doc.head.append(markdownStyle);
     const ui = buildPip(doc, win), options = { signal: pipListeners.signal };
-    ui.input.addEventListener("input", () => setDraft(ui.input.value), options);
-    ui.input.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && state.busy && state.draft.trim()) { event.preventDefault(); steerActiveAsk(); }
-    }, options);
+    ui.input.addEventListener("input", composerInput, options);
+    ui.input.addEventListener("keydown", composerKeydown, options);
     ui.steer.addEventListener("click", () => steerActiveAsk(), options);
     ui.send.addEventListener("click", () => { if (state.busy) cancelActiveAsk(); }, options);
     ui.form.addEventListener("submit", (event) => { event.preventDefault(); submitDraft(); }, options);
@@ -1779,7 +1841,7 @@ function syncPip() {
   const ui = pipUI, c = capture(), key = currentThread(), scope = `${profileId}\u0001${current?.id ?? ""}`;
   ui.title.textContent = current?.title ?? "세션을 고르세요";
   ui.status.textContent = state.status || (current ? "" : "본문에서 세션을 골라 주세요.");
-  if (ui.input.value !== state.draft) ui.input.value = state.draft;
+  if (ui.input.value !== state.draft) { ui.input.value = state.draft; fitComposer(ui.input); }
   ui.input.disabled = !current || !profilesReady || historyLoading || !chatOpen;
   ui.send.disabled = ui.input.disabled;
   ui.send.type = state.busy ? "button" : "submit";
@@ -1849,11 +1911,12 @@ for (const [domain, name] of Object.entries(DOMAINS)) {
   label.append(select); $("#domainPreferences").append(label);
 }
 createActionChips($("#chips"));
-$("#q").oninput = () => setDraft($("#q").value);
+$("#q").addEventListener("input", composerInput);
+$("#q").addEventListener("keydown", composerKeydown);
 /** 바로 질문의 요청문을 그대로 보내면 그 방식(대상, 모드, 표시 이름)으로 묻는다. 고쳐 쓰면 일반 질문이다. */
 function submitDraft() {
   const action = EXPLAIN_ACTIONS.find((entry) => entry.prompt === state.draft.trim()), target = action && explainTarget();
-  const sent = target ? ask(action.prompt, { focus: target, difficulty: action.difficulty, displayQuestion: action.label }) : state.draft.trim() && ask(state.draft);
+  const sent = target ? ask(action.prompt, { focus: target, difficulty: action.difficulty, displayQuestion: action.label }) : state.draft.trim() && ask(toMarkdown(state.draft));
   if (sent) setDraft("");
 }
 $("#threadClose").onclick = closeThread;
@@ -1987,11 +2050,9 @@ $("#auto").onchange = async () => {
 };
 $("#send").onclick = () => { if (state.busy) cancelActiveAsk(); };
 $("#steer").onclick = () => steerActiveAsk();
-$("#q").addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && state.busy && state.draft.trim()) { e.preventDefault(); steerActiveAsk(); }
-});
 $("#pipBtn").onclick = togglePip;
 $("#evidenceClose").onclick = () => closeEvidence();
+window.addEventListener("resize", () => { if (!$("#evidencePanel").hidden) fitEvidenceDrawer(); });
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
   if (!$("#evidencePanel").hidden) { closeEvidence(); return; }

@@ -36,8 +36,9 @@ export function peerProvider(name, base) {
 					const r = await fetch(url("/api/live", sid), { signal: ctl.signal });
 					if (!r.ok || !r.body) throw new Error(`${name}: ${r.status}`);
 					let buf = "";
+					const decoder = new TextDecoder();
 					for await (const chunk of r.body) {
-						buf += Buffer.from(chunk).toString("utf8");
+						buf += decoder.decode(chunk, { stream: true });
 						let nl;
 						while ((nl = buf.indexOf("\n\n")) >= 0) {
 							const frame = buf.slice(0, nl);

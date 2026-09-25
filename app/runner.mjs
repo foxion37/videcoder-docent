@@ -61,6 +61,8 @@ export async function createRunner({ bin, tmpRoot, timeoutMs }) {
 				finish(httpError(502, `설명 생성기를 실행하지 못했어요 (시간 제한). ${FAILED}`));
 			}, timeoutMs);
 			signal?.addEventListener("abort", onAbort, { once: true });
+			// 청크 경계에서 한글 등 여러 바이트 글자가 깨지지 않게 문자열 디코더를 쓴다.
+			child.stdout.setEncoding("utf8");
 			child.stdout.on("data", (chunk) => { stdout += chunk; });
 			child.on("error", (error) => finish(httpError(502, `설명 생성기를 실행하지 못했어요 (${error.code ?? "실행 오류"}). ${FAILED}`)));
 			child.on("close", (code) => {
@@ -158,6 +160,8 @@ export async function createRunner({ bin, tmpRoot, timeoutMs }) {
 			}
 		};
 
+		// 청크 경계에서 여러 바이트 글자가 깨지지 않게 문자열 디코더를 쓴다.
+		child.stdout.setEncoding("utf8");
 		child.stdout.on("data", (chunk) => {
 			buffer += chunk;
 			let index;

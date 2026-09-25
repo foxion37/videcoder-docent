@@ -60,6 +60,11 @@ if (args[0] === 'models') {
 	process.stdout.write(await readFile(${JSON.stringify(catalogFile)}, 'utf8'));
 } else if (flag('--mode') === 'rpc') {
 	const out = value => process.stdout.write(JSON.stringify(value) + '\\n');
+	// splitUtf8: 한 줄을 한글 글자 한가운데서 두 번에 나눠 쓴다(파이프 청크 경계 재현).
+	const outSplit = async value => {
+		const bytes = Buffer.from(JSON.stringify(value) + '\\n'), cut = bytes.lastIndexOf(Buffer.from('설')) + 1;
+		process.stdout.write(bytes.subarray(0, cut)); await delay(30); process.stdout.write(bytes.subarray(cut));
+	};
 	let turn = 0;
 	let current = null;
 	const run = async (message, id) => {
@@ -77,7 +82,8 @@ if (args[0] === 'models') {
 		}
 		if (current !== mine) return;
 		current = null;
-		out({ type: 'agent_end', messages: [{ role: 'user', content: [{ type: 'text', text: message }] }, { role: 'assistant', content: [{ type: 'text', text }] }] });
+		const end = { type: 'agent_end', messages: [{ role: 'user', content: [{ type: 'text', text: message }] }, { role: 'assistant', content: [{ type: 'text', text }] }] };
+		if (c.splitUtf8) await outSplit(end); else out(end);
 	};
 	out({ type: 'ready', protocolVersion: 1 });
 	for await (const raw of createInterface({ input: process.stdin })) {

@@ -146,3 +146,11 @@ test("a Claude Code transcript picks up subagent progress even when the main ses
 	await f.appendSubagent("a1", { type: "assistant", uuid: "s2", timestamp: "2026-01-01T00:00:20Z", message: { role: "assistant", content: [{ type: "text", text: "서브에이전트가 방금 끝낸 일" }] } });
 	assert.match(await transcript(), /서브에이전트가 방금 끝낸 일/);
 });
+
+test("Korean text split across output chunks is decoded intact, not stored with replacement characters", async (t) => {
+	const f = await fixture(t);
+	await f.control({ splitUtf8: true });
+	const answer = (await f.stream({ question: "지금 뭐 했어?", requestId: "utf8" })).at(-1).answer;
+	assert.match(answer.raw, /설명 깊이와 출력을 줄이지 않은 답변입니다/);
+	assert.equal(answer.raw.includes("\uFFFD"), false);
+});
