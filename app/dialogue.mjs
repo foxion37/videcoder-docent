@@ -1,13 +1,30 @@
-// 이어 묻기 맥락: 사용자가 화면에서 고른 질문 대상과 같은 대화 스레드의 최근 수동 문답.
-// 사실 근거는 현재 전사다. 여기 담긴 내용은 "그거", "두 번째" 같은 말이 무엇을 가리키는지 이해하기 위한 데이터다.
+// 스레드와 질문 대상 (ADR 0022·0028). 스레드 식별자·카드의 질문 대상·앱이 만든 요청문은 서버가 정한다.
+// 사실 근거는 현재 전사다. 과거 문답은 "그거", "두 번째" 같은 말이 무엇을 가리키는지 이해하는 데 쓴다.
 import { httpError } from "./learning.mjs";
-import { threadText } from "./store.mjs";
+import { threadKey, threadText } from "./store.mjs";
 
+const FOCUS_MAX = 7800;
 const RECENT = 6;
 const clip = (text, max) => {
 	const value = String(text ?? "");
 	return value.length > max ? `${value.slice(0, max)}…` : value;
 };
+
+export const EVENT_LABEL = { question: "질문", result: "작업 결과", plan: "계획" };
+
+/** 사건 카드별 미리 설명 요청문. 화면에는 `EVENT_DISPLAY` 로 보인다. */
+export const EVENT_REQUEST = {
+	question: "AI가 나에게 무엇을 물어보는지 쉬운 말로 설명해줘. 선택지가 있다면 뜻과 선택에 따른 차이, 내가 결정할 점을 알려줘.",
+	result: "이 작업 결과가 무엇을 바꿨고 나에게 어떤 의미인지 쉽게 설명해줘. 실제로 끝난 것과 아직 안 된 것을 구분해줘.",
+	plan: "AI가 앞으로 무엇을 왜 하려는지, 어떤 순서이고 내가 확인할 점은 무엇인지 쉽게 설명해줘.",
+};
+const EVENT_DISPLAY = "쉽게 설명해줘";
+const REQUESTS = new Set(Object.values(EVENT_REQUEST));
+
+/** 앱이 만든 요청문이면 화면에 보일 행동 이름. 아니면 undefined. */
+export const displayOf = (question) => (REQUESTS.has(String(question ?? "").trim()) ? EVENT_DISPLAY : undefined);
+
+export { threadKey };
 
 /** 선택 입력. 없으면 세션 전체에 대한 질문이다. */
 export function parseFocus(value) {
@@ -18,27 +35,59 @@ export function parseFocus(value) {
 	return { label, text };
 }
 
+/** 사용자가 보고 있는 카드 목록. 제안은 이 안에서만 한다. */
+export function parseCards(value) {
+	if (value === undefined || value === null) return [];
+	if (!Array.isArray(value) || value.length > 40 || value.some((card) => typeof card?.thread !== "string" || !/^[a-f0-9]{16}$/.test(card.thread) || typeof card.label !== "string" || !card.label.trim() || card.label.length > 200)) {
+		throw httpError(400, "카드 목록은 40개 이내의 {thread, label} 이어야 해요.");
+	}
+	return value.map(({ thread, label }) => ({ thread, label: label.trim() }));
+}
+
+function blockTitle(text) {
+	const lines = String(text ?? "").split("\n").map((line) => line.replace(/^\s*(?:[#>*+-]+\s*|\d+[.)]\s+)*/, "").replace(/[*_`]/g, "").replace(/^\s*[✅⏳⛔]\s*/u, "").trim()).filter(Boolean);
+	const line = lines.find((entry) => entry.length > 8) || lines[0] || "";
+	return line.length > 100 ? `${line.slice(0, 100)}…` : line;
+}
+
+function excerpt(text, max) {
+	if (text.length <= max) return text;
+	const half = Math.floor((max - 48) / 2);
+	return `${text.slice(0, half)}\n\n[중간 생략 — 전체 내용은 세션 전사에서 확인]\n\n${text.slice(-half)}`;
+}
+
+/** 라이브 사건 → 카드의 질문 대상과 스레드. 브라우저와 미리 설명이 같은 값을 쓴다. */
+export function focusOfEvent(ev) {
+	const options = Array.isArray(ev.options) ? ev.options.map((option) => `${option.label ?? ""}${option.description ? ` — ${option.description}` : ""}`).join("\n") : "";
+	const text = excerpt(`${ev.text.trim()}${options ? `\n\n선택지:\n${options}` : ""}`, FOCUS_MAX);
+	const focus = { label: blockTitle(ev.text) || EVENT_LABEL[ev.sub], text };
+	return { focus, thread: threadKey(text) };
+}
+
 /** 작업 내용 카드마다 대화가 따로 이어진다. 질문 대상 내용이 같은 문답만 같은 스레드다. 대상이 없으면 세션 전체 대화. */
 export function threadRecords(records, focus) {
 	const key = threadText(focus?.text);
 	return records.filter((record) => threadText(record.focus?.text) === key);
 }
 
-/** 자동 설명은 사용자가 대화에서 읽은 문답이 아니므로 제외한다. 오래된 순으로 최근 6개. */
+/** 학습 분류용 최근 대화 요약. 사용자가 스레드에서 읽은 미리 설명도 포함한다. */
 export function recentDialogue(records) {
 	return records
-		.filter((record) => !record.auto && record.answer)
+		.filter((record) => record.answer)
 		.slice(-RECENT)
 		.map((record) => ({
-			question: clip(record.question, 600),
-			focus: record.focus?.label ?? null,
-			answer: clip([record.answer.headline, record.answer.explain].filter(Boolean).join("\n"), 1200),
+			question: clip(displayOf(record.question) ?? record.question, 600),
+			...(record.steers?.length ? { steers: record.steers.map((text) => clip(text, 300)) } : {}),
+			answer: clip([record.answer.headline, record.answer.explain].filter(Boolean).join("\n"), 800),
 		}));
 }
 
-export function dialogueContext(focus, records) {
-	const recent = recentDialogue(records);
-	return `질문 대상(사용자가 화면에서 고른 내용, 데이터): ${focus ? JSON.stringify(focus) : "없음 — 세션 전체에 대한 질문"}
-이 세션의 최근 문답(오래된 순, 데이터): ${JSON.stringify(recent)}
-이 두 자료는 앞 대화를 가리키는 말을 해석하는 데만 쓴다. 과거 답변은 사실 근거가 아니며 인용 ID로 쓰지 않는다. 사실은 현재 전사로 확인한다.`;
+/** 설명 호출의 이번 질문 맥락. 이전 문답은 대화 자체에 이미 있다. */
+export function questionContext(focus) {
+	return `질문 대상(스레드의 시작 주제, 사용자가 고른 사건 카드, 데이터): ${focus ? JSON.stringify(focus) : "없음 — 세션 전체 대화"}
+이 스레드의 이전 대화가 가장 가까운 맥락이다. 질문이 직전 문답이나 다른 내용을 가리키면 질문 대상보다 그 흐름을 따른다. 사실은 현재 전사로 확인하고, 과거 답변은 인용 ID로 쓰지 않는다.`;
 }
+
+/** 바로잡기 문장을 같은 대화에 넣는 형식. */
+export const steerMessage = (message) => `바로잡기(사용자가 방금 보낸 보정, 데이터): ${message}
+지금까지 쓰던 답은 버리고, 이 보정을 반영해 같은 질문에 처음부터 다시 답한다. 답 형식과 근거 규칙은 그대로다.`;

@@ -20,3 +20,27 @@ export function errorSummary(text, max) {
 	const rest = lines.filter((l) => !picked.includes(l));
 	return [...picked, ...rest].join("\n").slice(0, max);
 }
+
+const QUESTION_MAX = 1500;
+const OPTION_DESC_MAX = 400;
+
+/**
+ * ask/AskUserQuestion 호출의 질문과 선택지를 들여쓴 줄로. 호출 줄 아래 같은 source 안에 붙는다.
+ * 이게 빠지면 전사에 "→ ask(...)"만 남아 도슨트가 무엇을 물었는지 모르고 엉뚱한 답을 한다.
+ */
+export function askQuestionLines(questions) {
+	const out = [];
+	for (const q of questions ?? []) {
+		if (!q || typeof q !== "object") continue;
+		const head = typeof q.header === "string" && q.header ? `[${q.header}] ` : "";
+		const multi = q.multi === true || q.multiSelect === true ? " (여러 개 선택)" : "";
+		out.push(`  질문: ${head}${String(q.question ?? "").slice(0, QUESTION_MAX)}${multi}`);
+		const recommended = Number.isSafeInteger(q.recommended) ? q.recommended : -1;
+		for (const [index, o] of (q.options ?? []).entries()) {
+			if (!o || typeof o !== "object") continue;
+			const desc = typeof o.description === "string" && o.description ? ` — ${o.description.slice(0, OPTION_DESC_MAX)}` : "";
+			out.push(`    - ${String(o.label ?? "")}${desc}${index === recommended ? " (추천)" : ""}`);
+		}
+	}
+	return out;
+}

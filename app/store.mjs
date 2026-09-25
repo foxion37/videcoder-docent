@@ -1,6 +1,6 @@
 // 기존 questions.jsonl 은 기본 프로필의 역사로 보존한다. 새 기록과 학습 상태는 한 번에 원자적으로 저장한다.
 import { mkdir, open, readFile, rename, rm } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
@@ -13,7 +13,7 @@ let writes = Promise.resolve();
 
 const emptyState = () => ({
 	version: 1,
-	profiles: [{ id: "default", name: "기본", defaultDifficulty: "NORMAL", domainDifficulties: {}, model: null }],
+	profiles: [{ id: "default", name: "기본", defaultDifficulty: "NORMAL", domainDifficulties: {}, model: null, autoExplain: true }],
 	items: [],
 	records: [],
 	requests: {},
@@ -58,7 +58,10 @@ export async function readState() {
 	if (state.version !== 1 || !Array.isArray(state.profiles) || !state.profiles.some((p) => p.id === "default") || !Array.isArray(state.items) || !Array.isArray(state.records) || !state.requests || typeof state.requests !== "object" || Array.isArray(state.requests)) {
 		throw new Error("학습 저장 파일 형식이 올바르지 않아요. 기존 파일을 보존하고 읽기를 중단했어요.");
 	}
-	for (const profile of state.profiles) profile.model ??= null;
+	for (const profile of state.profiles) {
+		profile.model ??= null;
+		profile.autoExplain ??= true;
+	}
 	return compactAnswerCopies(state);
 }
 
@@ -111,7 +114,7 @@ export async function history(sessionId, profileId = "default") {
 			}
 		}
 	}
-	return rows.sort((a, b) => String(a.ts).localeCompare(String(b.ts)));
+	return rows.map((row) => ({ ...row, thread: threadKey(row.focus?.text) })).sort((a, b) => String(a.ts).localeCompare(String(b.ts)));
 }
 
 /** 용어 추출 결과를 저장한다. 새 문답은 레코드에, 옛 questions.jsonl 줄은 원본을 고치지 않고 따로 보관한다. */
@@ -129,9 +132,15 @@ export function saveKeywords(profileId, byId) {
 /** 대화 스레드는 세션과 질문 대상 내용으로 구분한다. 공백 차이는 같은 스레드로 본다. 빈 문자열은 세션 전체 대화. */
 export const threadText = (text) => String(text ?? "").replace(/\s+/g, " ").trim();
 
+/** 화면과 서버가 함께 쓰는 스레드 식별자. 브라우저는 계산하지 않고 받아 쓴다. "" 는 세션 전체 대화. */
+export const threadKey = (text) => {
+	const normalized = threadText(text);
+	return normalized ? createHash("sha256").update(normalized).digest("hex").slice(0, 16) : "";
+};
+
 export async function favorites(profileId, sessionId) {
 	const state = await readState();
-	return (state.favorites ?? []).filter((entry) => entry.profileId === profileId && (!sessionId || entry.sessionId === sessionId)).map(({ sessionId: id, label, text, ts }) => ({ sessionId: id, label, text, ts }));
+	return (state.favorites ?? []).filter((entry) => entry.profileId === profileId && (!sessionId || entry.sessionId === sessionId)).map(({ sessionId: id, label, text, ts }) => ({ sessionId: id, label, text, ts, thread: threadKey(text) }));
 }
 
 /** 즐겨찾기 켜기/끄기. 같은 스레드는 한 번만 저장한다. */

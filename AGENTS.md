@@ -23,6 +23,7 @@
 
 ## 빠른 링크
 
+- @CONTEXT.md
 - @docs/concept.md
 - @docs/scope.md
 - @docs/architecture.md
@@ -45,3 +46,8 @@
 - @docs/decisions/0014-learning-evidence-and-pip.md
 - @docs/decisions/0015-explanation-first-surface.md
 - @docs/decisions/0016-docent-model-selection.md
+- @docs/decisions/0028-isolated-runner-and-live-threads.md
+- @docs/decisions/0029-ask-jobs-stop-steer-queue.md
+- @docs/decisions/0030-light-learning-classification.md
+- @docs/decisions/0031-server-side-pre-explanation.md
+- @docs/decisions/0032-classify-after-answer-and-more-hosts.md

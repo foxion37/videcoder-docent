@@ -271,6 +271,19 @@
   .explain-menu summary::-webkit-details-marker { display:none }
   .explain-menu .chips { position:absolute; z-index:5; bottom:calc(100% + 10px); right:-40px; flex-direction:column; align-items:stretch; min-width:240px; margin:0; padding:8px; background:var(--panel); border:1px solid var(--line); border-radius:10px; box-shadow:0 6px 24px #0002 }
   .explain-menu .chips button { text-align:left }
+  .steer-lines { display:flex; flex-direction:column; gap:2px; align-self:flex-end; max-width:70% }
+  .steer-lines:empty { display:none }
+  .steer-line { color:var(--mute); font-size:12px; text-align:right; padding:0 12px; overflow-wrap:anywhere }
+  .queue-list { display:flex; flex-direction:column; gap:6px; margin-bottom:10px }
+  .queue-list:empty { display:none }
+  .queue-item { display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:10px; padding:6px 10px; background:var(--btn); font-size:13px }
+  .queue-text { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+  .queue-item .control { flex:none; padding:4px 8px; font-size:12px }
+  .draft-notice { display:flex; align-items:center; flex-wrap:wrap; gap:8px; font-size:12px; color:var(--mute); margin-bottom:8px }
+  .draft-notice:empty { display:none }
+  .draft-notice .control { padding:3px 8px; font-size:12px }
+  .steer-btn { flex:none; white-space:nowrap }
+  .pending-answer .wait { margin:0 }
   /* 카테고리 색과 아이콘 */
   :root { --cat-question:light-dark(#b45309,#f3a64d); --cat-result:light-dark(#15803d,#6fd08f); --cat-plan:light-dark(#4f46e5,#a9a6f8); --pane-work:light-dark(#efeee9,#111111) }
   .cat { --cat:var(--mute); display:inline-flex; align-items:center; justify-content:center; gap:4px; height:22px; font-size:12px; line-height:1; font-weight:600; color:var(--cat); background:color-mix(in srgb, var(--cat) 13%, transparent); border-radius:999px; padding:0 9px 0 7px; white-space:nowrap }
@@ -366,10 +379,13 @@
       <div class="pane-title chat-head"><span id="threadChip"></span><h2 id="chatTitle">세션 전체 대화</h2><button id="threadStar" class="icon-btn small star" type="button" aria-pressed="false" aria-label="이 대화 즐겨찾기" data-tip="즐겨찾기"></button><button id="threadClose" class="icon-btn small" type="button" aria-label="대화 닫기" data-tip="대화 닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
       <div id="log"></div>
       <footer>
+        <div id="draftNotice" class="draft-notice" role="status"></div>
+        <div id="queueList" class="queue-list"></div>
         <div id="askStatus" class="notice" role="status"></div>
         <form id="form" class="composer">
           <input id="q" placeholder="궁금한 걸 물어보세요" aria-label="도슨트에게 물어볼 질문" autocomplete="off" disabled />
           <details id="explainMenu" class="explain-menu"><summary>바로 질문</summary><div class="chips" id="chips"></div></details>
+          <button id="steer" class="control steer-btn" type="button" hidden>지금 바로잡기</button>
           <button id="send" class="send" aria-label="묻기" title="묻기" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
         </form>
       </footer>
@@ -438,7 +454,7 @@
         <li>지난 기록은 자동 요청하지 않음.</li>
         <li>모델 호출 비용 발생.</li>
         <li>10분에 최대 5개씩 차례로 처리.</li>
-        <li>자동 설명 기능을 끄면 기기에 기억.</li>
+        <li>자동 설명 켜기·끄기는 프로필에 저장됨.</li>
       </ul>
       <p id="autoStatus" class="notice" role="status"></p>
     </section>
@@ -457,6 +473,7 @@ const $ = (s) => document.querySelector(s);
 $("#settingsBtn").onclick = () => {
   $("#settings").showModal();
   if (!modelCatalog && !modelCatalogError) loadModelCatalog();
+  loadPrefetch();
 };
 $("#settingsClose").onclick = () => $("#settings").close();
 const EXPLAIN_ACTIONS = [
@@ -475,18 +492,17 @@ let current = null, sessions = [], profiles = [], profileId = "default", profile
 let theme = THEMES.includes(saved("theme")) ? saved("theme") : "auto", view = "chat";
 let sessionRequest = 0, reviewRequest = 0, evidenceRequest = 0, sessionsRequest = 0;
 let refreshedAt = null, refreshFailed = false, stream = null, glossary = [], historyLoading = false;
-const pastByQ = new Map(), preferencesPending = new Set();
+const pastByThread = new Map(), preferencesPending = new Set();
 let modelCatalog = null, modelCatalogLoading = false, modelCatalogError = "", modelFormProfileId = null, modelDraft = "";
-const autoQueue = [], autoRequests = [], autoSeen = new Map(), eventCards = new Map();
+let prefetchInfo = null, prefetchFailed = false;
+const autoJobs = new Map(), pendingQueue = [], manualJobs = [], eventCards = new Map();
 const state = { draft: "", busy: false, latest: null, focus: null, status: "" };
-// 작업 내용 카드마다 대화가 따로 이어진다. 스레드 키는 질문 대상 내용(공백 정리), 빈 문자열은 세션 전체 대화.
+// 작업 내용 카드마다 대화가 따로 이어진다. 스레드 키는 서버가 정한 문자열, 빈 문자열은 세션 전체 대화.
 let threadRecords = [], chatOpen = false;
-const favoriteTexts = new Set(), cardByThread = new Map();
-const threadOf = (focus) => focus ? normalizeQuestion(excerpt(focus.text, 7800)) : "";
-const recordThread = (record) => normalizeQuestion(record.focus?.text ?? "");
-const currentThread = () => threadOf(state.focus);
+const favoriteThreads = new Set(), cardByThread = new Map();
+const currentThread = () => state.focus?.thread ?? "";
 /** 카드 스레드는 같은 대상의 문답만, 세션 전체 대화는 어느 카드에도 속하지 않은 문답을 모은다. */
-const inThread = (record, key) => { const own = recordThread(record); return key ? own === key : !own || !cardByThread.has(own); };
+const inThread = (record, key) => { const own = record.thread ?? ""; return key ? own === key : !own || !cardByThread.has(own); };
 let activeAsk = null, pipWindow = null, pipUI = null, pipOpening = false, pipListeners = null;
 let evidenceOpener = null;
 let termDialog = null;
@@ -527,15 +543,24 @@ function setDraft(value, focus = false) {
   if (focus && !$("#q").disabled) $("#q").focus();
 }
 
+const SEND_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+const STOP_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
+
 function syncComposer() {
   if ($("#q").value !== state.draft) $("#q").value = state.draft;
   $("#q").disabled = !current || !profilesReady || historyLoading;
-  $("#send").disabled = $("#q").disabled || state.busy;
+  const send = $("#send");
+  send.disabled = $("#q").disabled;
+  send.type = state.busy ? "button" : "submit";
+  send.innerHTML = state.busy ? STOP_SVG : SEND_SVG;
+  const sendLabel = state.busy ? "설명 중단" : "묻기";
+  send.setAttribute("aria-label", sendLabel); send.title = sendLabel;
+  $("#steer").hidden = !(state.busy && state.draft.trim());
   $("#askStatus").textContent = state.status;
-  $("#chatTitle").textContent = state.focus?.label ?? "세션 전체 대화";
+  $("#chatTitle").textContent = state.focus?.card?.displayTitle ?? state.focus?.label ?? "세션 전체 대화";
   $("#threadChip").replaceChildren(...(state.focus?.card ? [catChip(state.focus.card.dataset.eventType)] : []));
-  setStar($("#threadStar"), favoriteTexts.has(currentThread()));
-  syncActionChips(); updateAutoStatus();
+  setStar($("#threadStar"), favoriteThreads.has(currentThread()));
+  syncActionChips(); renderAutoStatus(); renderQueue(); renderDraftNotice();
   for (const doc of [document, pipWindow?.document].filter(Boolean)) doc.querySelectorAll(".event-ask").forEach((b) => b.disabled = !current || state.busy || historyLoading);
   syncPip();
 }
@@ -555,10 +580,9 @@ function excerpt(value, max = 6000) {
 }
 
 function answerTarget(answer) {
-  return { label: blockTitle(answer.headline) || "최근 설명", text: [answer.headline, answer.explain, ...(answer.details ?? [])].filter(Boolean).join("\n\n"), card: null };
+  return { label: blockTitle(answer.headline) || "최근 설명", text: [answer.headline, answer.explain, ...(answer.details ?? [])].filter(Boolean).join("\n\n"), card: null, thread: answer.thread ?? "" };
 }
 
-const questionKey = (question, focus) => normalizeQuestion(`${question}\n${focus?.text ?? ""}`);
 
 /** 질문 대상이 있으면 그것을, 없으면 가장 최근 설명을 다시 설명한다. */
 function explainTarget() {
@@ -666,7 +690,7 @@ function renderProfiles() {
     select.value = p?.domainDifficulties?.[select.dataset.domain] ?? "";
     select.disabled = !p;
   }
-  renderModelSettings();
+  renderModelSettings(); renderAutoStatus();
 }
 
 function modelPrice(value) {
@@ -734,6 +758,15 @@ async function loadProfiles() {
     profiles = await api("/api/profiles");
     profileId = profiles.some((p) => p.id === saved("profile")) ? saved("profile") : "default";
     profilesReady = true; renderProfiles(); $("#profileNotice").textContent = "";
+    // 이전 버전은 자동 설명 켜기를 기기에 저장했다. 꺼둔 기억이 있으면 프로필 설정으로 한 번 옮긴다.
+    const legacyAuto = saved("auto");
+    if (legacyAuto === "0" || legacyAuto === "off") {
+      try {
+        const p = await api(`/api/profiles/${encodeURIComponent(profileId)}`, "PATCH", { autoExplain: false });
+        profiles = profiles.map((entry) => entry.id === p.id ? p : entry); renderProfiles();
+      } catch { /* 옮기지 못해도 키는 지운다. */ }
+      try { localStorage.removeItem("docent.auto"); } catch {}
+    }
     await switchProfile(profileId);
   } catch (e) {
     $("#profileNotice").textContent = `프로필을 불러오지 못했어요: ${e.message}`;
@@ -744,10 +777,13 @@ async function loadProfiles() {
 function invalidateContext() {
   sessionRequest++; reviewRequest++; evidenceRequest++;
   stream?.close(); stream = null;
-  clearAutoQueue(); activeAsk = null; state.busy = false; historyLoading = false;
-  pastByQ.clear(); glossary = []; threadRecords = []; chatOpen = false; favoriteTexts.clear(); cardByThread.clear();
+  for (const job of [...manualJobs, ...autoJobs.values()]) job.abort?.abort();
+  manualJobs.length = 0; autoJobs.clear(); pendingQueue.length = 0;
+  activeAsk = null; state.busy = false; historyLoading = false;
+  pastByThread.clear(); glossary = []; threadRecords = []; chatOpen = false; favoriteThreads.clear(); cardByThread.clear();
   eventCards.clear(); termDialog?.close();
   state.latest = null; state.focus = null; state.draft = ""; state.status = "";
+  prefetchInfo = null; prefetchFailed = false; draftNotice = null;
   closeEvidence(false); setStage();
 }
 
@@ -761,7 +797,7 @@ async function switchProfile(id) {
   clearSurface($("#reviewBody")); clearSurface($("#log")); clearSurface($("#flow"));
   const loading = session ? select(session) : Promise.resolve();
   const c = capture();
-  if (!session) { syncComposer(); loadGlossary(); }
+  if (!session) { syncComposer(); loadGlossary(); loadPrefetch(); }
   await loading;
   if (wasReview && isCurrent(c)) showReview();
 }
@@ -1003,8 +1039,7 @@ async function select(s) {
     const [past, favs] = await Promise.all([api(scopedUrl("/api/history", c, { id: s.id })), api(scopedUrl("/api/favorites", c, { id: s.id }))]);
     if (!isCurrent(c)) return;
     threadRecords = past.map((r) => r.keywords && r.answer ? { ...r, answer: { ...r.answer, keywords: r.keywords } } : r);
-    for (const r of past) pastByQ.set(questionKey(r.question, r.focus), r.answer);
-    for (const f of favs) favoriteTexts.add(normalizeQuestion(f.text));
+    for (const f of favs) if (typeof f.thread === "string") favoriteThreads.add(f.thread);
     state.status = "";
   } catch (e) {
     if (!isCurrent(c)) return;
@@ -1012,12 +1047,36 @@ async function select(s) {
   }
   if (!isCurrent(c)) return;
   historyLoading = false; syncComposer();
-  stream = new EventSource(`/api/live?id=${encodeURIComponent(s.id)}`);
+  stream = new EventSource(`/api/live?id=${encodeURIComponent(s.id)}&profileId=${encodeURIComponent(c.profileId)}`);
   stream.onmessage = (m) => {
     if (!isCurrent(c)) return;
     try { renderEvent(JSON.parse(m.data)); }
     catch { state.status = "실시간 기록 하나를 읽지 못했어요."; syncComposer(); }
   };
+  loadPrefetch();
+  reattachJobs(c);
+}
+
+/** 새로고침·세션 다시 열기 뒤 서버에 남은 진행 중 작업에 다시 붙는다. 같은 requestId로 내면 이어 받는다. */
+async function reattachJobs(c) {
+  try {
+    const jobs = await api(scopedUrl("/api/jobs", c, { id: c.sessionId }));
+    if (!isCurrent(c)) return;
+    for (const j of jobs) {
+      if (j.auto) {
+        if (autoJobs.has(j.requestId)) continue;
+        const job = { ...newQuestion(j.question, true, j.focus ?? null), requestId: j.requestId, card: cardByThread.get(j.thread) ?? null, displayQuestion: j.display ?? null, stage: j.stage ?? "queued", text: j.text ?? "", thread: j.thread ?? "", reattached: true };
+        autoJobs.set(j.requestId, job);
+        syncAutoCard(job);
+        runJob(job);
+      } else {
+        if (manualJobs.some((job) => job.requestId === j.requestId)) continue;
+        const job = { ...newQuestion(j.question, false, j.focus ?? null), requestId: j.requestId, displayQuestion: j.display ?? null, stage: j.stage ?? "queued", text: j.text ?? "", thread: j.thread ?? "", detached: manualJobs.length > 0, reattached: true };
+        manualJobs.push(job);
+        runJob(job);
+      }
+    }
+  } catch { /* 진행 중 작업 확인에 실패해도 세션 열기는 그대로 둔다. */ }
 }
 
 const EVENT_LABEL = { question: "질문", result: "작업 결과", plan: "계획" };
@@ -1044,21 +1103,21 @@ function setStar(b, on) {
 
 function syncFavorites() {
   for (const card of eventCards.values()) {
-    const on = favoriteTexts.has(threadOf(card.focus));
+    const on = card.thread ? favoriteThreads.has(card.thread) : false;
     card.classList.toggle("fav", on); setStar(card.querySelector(".card-star"), on);
   }
-  setStar($("#threadStar"), favoriteTexts.has(currentThread())); syncPip();
+  setStar($("#threadStar"), favoriteThreads.has(currentThread())); syncPip();
 }
 
 async function toggleFavorite(focus) {
-  const c = capture(), key = threadOf(focus), on = !favoriteTexts.has(key);
+  const c = capture(), key = focus?.thread ?? "", on = !favoriteThreads.has(key);
   if (!c.sessionId) return;
-  on ? favoriteTexts.add(key) : favoriteTexts.delete(key); syncFavorites();
+  on ? favoriteThreads.add(key) : favoriteThreads.delete(key); syncFavorites();
   try {
     await api("/api/favorites", "POST", { profileId: c.profileId, id: c.sessionId, favorite: on, focus: focus ? { label: focus.label.slice(0, 200), text: excerpt(focus.text, 7800) } : null });
   } catch (e) {
     if (!isCurrent(c)) return;
-    on ? favoriteTexts.delete(key) : favoriteTexts.add(key); syncFavorites();
+    on ? favoriteThreads.delete(key) : favoriteThreads.add(key); syncFavorites();
     state.status = `즐겨찾기 저장 실패: ${e.message}`; syncComposer();
   }
 }
@@ -1075,8 +1134,16 @@ function setStage() {
 function renderThread() {
   const c = capture(), log = $("#log"), key = currentThread(); clearSurface(log);
   const rows = threadRecords.filter((record) => inThread(record, key));
-  for (const r of rows) log.append(questionNode(displayOf(r.question), key ? null : r.focus), renderAnswer(r.answer, c));
-  if (activeAsk && !activeAsk.auto && activeAsk.thread === key && activeAsk.nodes) log.append(...activeAsk.nodes);
+  for (const r of rows) {
+    log.append(questionNode(r.display || displayOf(r.question), key ? null : r.focus));
+    if (r.steers?.length) {
+      const lines = el("div", "steer-lines");
+      for (const message of r.steers) lines.append(el("div", "steer-line", `바로잡기: ${message}`));
+      log.append(lines);
+    }
+    log.append(renderAnswer(r.answer, c));
+  }
+  for (const job of manualJobs) if (job.thread === key && job.nodes) log.append(...job.nodes);
   if (!log.childElementCount) log.append(el("div", "empty", key ? "이 내용에 대해 궁금한 걸 물어보세요." : "이 세션 전체에 대해 궁금한 걸 물어보세요."));
   state.latest = rows.at(-1)?.answer ?? null;
   log.scrollTop = log.scrollHeight;
@@ -1155,8 +1222,9 @@ function summarySentences(text, max = 3) {
 function attachCardAnswer(card, answer) {
   card.answer = answer;
   // 제목은 세션 제목처럼 짧은 요약, 결론 문장은 아래 요약의 첫 문장으로 둔다.
+  // 서버에 보내는 질문 대상(focus)은 사건 원문 그대로 두고, 화면 제목만 따로 둔다.
   const title = answer.title || blockTitle(answer.headline) || card.focus.label, open = card.querySelector(".event-open");
-  card.focus.label = title; open.textContent = title; open.title = title;
+  card.displayTitle = title; open.textContent = title; open.title = title;
   const conclusion = answer.title ? blockTitle(answer.headline) : "";
   card.querySelector(".event-summary").textContent = summarySentences([conclusion, answer.explain || answer.details?.[0]].filter(Boolean).join("\n"));
   eventState(card, "", "ready");
@@ -1168,20 +1236,66 @@ function openCard(card, c) {
   openThread(card.focus);
 }
 
+const AUTO_STATE = {
+  queued: ["새 내용의 쉬운 설명을 기다리는 중이에요.", "queued"],
+  limited: ["자동 설명 한도에 도달했어요. 직접 요청할 수 있어요.", "limited"],
+  disabled: ["", "disabled"],
+  duplicate: ["", "duplicate"],
+  past: ["", "past"],
+};
+
+/** 서버가 미리 설명을 붙인 카드는 같은 requestId로 작업에 붙어 진행 상황과 답을 받는다. */
+function attachAuto(card, ask) {
+  const existing = autoJobs.get(ask.requestId);
+  if (existing) {
+    existing.card = card;
+    if (existing.answer) attachCardAnswer(card, existing.answer);
+    else syncAutoCard(existing);
+    return;
+  }
+  const job = { ...newQuestion(ask.question, true, card.focus), requestId: ask.requestId, card, displayQuestion: ask.display ?? null, thread: card.thread };
+  autoJobs.set(job.requestId, job);
+  syncAutoCard(job);
+  runJob(job);
+}
+
+function syncAutoCard(job) {
+  if (!job.card) return;
+  if (job.stage === "queued") eventState(job.card, "새 내용의 쉬운 설명을 기다리는 중이에요.", "queued");
+  else eventState(job.card, "새 내용의 쉬운 설명을 준비하는 중이에요.", "running");
+}
+
+/** 답 뒤에서 끝난 학습 분류(카드 제목·핵심 단어·카드 제안)를 반영한다 (ADR 0032). */
+function applyRecordUpdate(answer) {
+  if (!answer?.recordId) return;
+  const record = threadRecords.find((row) => row.answer?.recordId === answer.recordId);
+  if (!record) return;
+  record.answer = answer;
+  if (record.thread && pastByThread.get(record.thread)?.recordId === answer.recordId) pastByThread.set(record.thread, answer);
+  const card = cardByThread.get(record.thread);
+  if (card?.answer?.recordId === answer.recordId) attachCardAnswer(card, answer);
+  // 같은 스레드에서 설명이 흐르는 중이면 다시 그리지 않는다. 다음에 스레드를 그릴 때 반영된다.
+  const key = currentThread();
+  if (chatOpen && inThread(record, key) && !manualJobs.some((job) => job.thread === key && job.nodes)) renderThread();
+  loadGlossary(); syncPip();
+}
+
 function renderEvent(ev) {
   if (!ev || typeof ev !== "object") return;
+  if (ev.kind === "record") { applyRecordUpdate(ev.answer); return; }
   if (ev.kind === "warn") {
     $("#liveNotice").textContent = typeof ev.text === "string" ? ev.text : "실시간 분류를 확인하지 못했어요.";
     return;
   }
   if (!["question", "assistant"].includes(ev.kind) || !Object.hasOwn(EVENT_LABEL, ev.sub) || typeof ev.text !== "string" || !ev.text.trim()) return;
-  const c = capture(), request = EVENT_REQUEST[ev.sub];
+  const c = capture();
   const options = Array.isArray(ev.options) ? ev.options.map((o) => `${o.label ?? ""}${o.description ? ` — ${o.description}` : ""}`).join("\n") : "";
-  const focus = { label: blockTitle(ev.text) || EVENT_LABEL[ev.sub], text: `${ev.text.trim()}${options ? `\n\n선택지:\n${options}` : ""}` };
-  const key = questionKey(request, focus);
+  const focus = ev.focus?.text ? { label: ev.focus.label || blockTitle(ev.text) || EVENT_LABEL[ev.sub], text: ev.focus.text } : { label: blockTitle(ev.text) || EVENT_LABEL[ev.sub], text: `${ev.text.trim()}${options ? `\n\n선택지:\n${options}` : ""}` };
+  const thread = ev.thread ?? "";
+  const key = thread || `${ev.sub}\n${normalizeQuestion(ev.text)}`;
   if (eventCards.has(key)) return;
   const card = el("article", `ev ${ev.kind}${ev.past ? " past" : ""}`); card.dataset.eventType = ev.sub;
-  focus.card = card; card.focus = focus; card.request = request;
+  focus.card = card; focus.thread = thread; card.focus = focus; card.thread = thread;
   const heading = el("div", "event-heading"); heading.append(catChip(ev.sub));
   if (!ev.past) {
     document.querySelectorAll(".event-new").forEach((tag) => tag.remove());
@@ -1199,59 +1313,37 @@ function renderEvent(ev) {
   }
   const star = button("", () => toggleFavorite(card.focus), "icon-btn small star card-star"); star.innerHTML = STAR_SVG;
   card.append(heading, title, el("p", "event-summary"), status, source, star);
-  eventCards.set(key, card); cardByThread.set(threadOf(focus), card); toFlow(card); syncFavorites();
-  if (pastByQ.has(key)) attachCardAnswer(card, pastByQ.get(key));
+  eventCards.set(key, card); if (thread) cardByThread.set(thread, card); toFlow(card); syncFavorites();
+  if (thread && pastByThread.has(thread)) attachCardAnswer(card, pastByThread.get(thread));
+  else if (ev.ask) attachAuto(card, ev.ask);
+  else if (AUTO_STATE[ev.autoState]) eventState(card, ...AUTO_STATE[ev.autoState]);
   else if (ev.past) eventState(card, "", "past");
-  else autoAsk(card, request, focus);
+  else eventState(card, "", "ready");
   syncComposer();
 }
 
-function autoTimes() {
-  while (autoRequests.length && autoRequests[0] <= Date.now() - 10 * 60 * 1000) autoRequests.shift();
-  return autoRequests;
+/** 자동 설명 상태 문구는 서버의 미리 설명 정보를 따른다. */
+async function loadPrefetch() {
+  if (!profilesReady) return;
+  const c = capture();
+  try {
+    prefetchInfo = await api(scopedUrl("/api/prefetch", c));
+    prefetchFailed = false;
+  } catch { prefetchInfo = null; prefetchFailed = true; }
+  if (isCurrent(c)) renderAutoStatus();
 }
 
-function updateAutoStatus() {
-  const used = autoTimes().length;
+function renderAutoStatus() {
+  const p = profiles.find((entry) => entry.id === profileId);
+  $("#auto").checked = p?.autoExplain !== false;
+  const info = prefetchInfo;
   const text = !$("#auto").checked ? "현재 상태: 꺼짐"
-    : `현재 상태: 켜짐, 최근 10분 ${used}/5개${autoQueue.length ? `, ${autoQueue.length}개 대기` : ""}${used >= 5 ? ", 한도 도달 (수동 요청 가능)" : ""}`;
+    : prefetchFailed ? "현재 상태: 확인하지 못했어요"
+    : info ? `현재 상태: ${info.enabled ? "켜짐" : "꺼짐"}, 최근 10분 ${info.used}/${info.limit}개${info.queued ? `, ${info.queued}개 대기` : ""}${info.used >= info.limit ? ", 한도 도달 (수동 요청 가능)" : ""}`
+    : "";
   $("#autoStatus").textContent = text;
 }
 
-function clearAutoQueue() {
-  for (const job of autoQueue.splice(0)) {
-    eventState(job.card, "", "disabled");
-  }
-}
-
-function autoAsk(card, question, focus) {
-  const key = questionKey(question, focus), scope = `${profileId}\n${current?.id}`;
-  if (!autoSeen.has(scope)) autoSeen.set(scope, new Set());
-  const seen = autoSeen.get(scope);
-  if (!current || !$("#auto").checked) { eventState(card, "", "disabled"); return; }
-  if (seen.has(key) || activeAsk?.key === key || autoQueue.some((job) => job.key === key)) {
-    eventState(card, "", "duplicate"); return;
-  }
-  if (autoTimes().length + autoQueue.length >= 5) {
-    eventState(card, "자동 설명 한도에 도달했어요. 직접 요청할 수 있어요.", "limited"); return;
-  }
-  seen.add(key); eventState(card, "새 내용의 쉬운 설명을 기다리는 중이에요.", "queued");
-  autoQueue.push({ ...newQuestion(question, true, focus), card });
-  runAutoQueue();
-}
-
-function runAutoQueue() {
-  if (state.busy || historyLoading) return;
-  while (autoQueue.length) {
-    const job = autoQueue.shift();
-    if (!isCurrent(job.context)) continue;
-    if (!$("#auto").checked || autoTimes().length >= 5) {
-      eventState(job.card, "자동 설명 한도에 도달했어요. 직접 요청할 수 있어요.", "limited"); continue;
-    }
-    autoTimes().push(Date.now()); executeQuestion(job); return;
-  }
-  updateAutoStatus();
-}
 
 function renderAnswer(r, c = capture(), compact = false) {
   const a = el("div", "a"), head = el("div", "head"), used = new Set();
@@ -1275,6 +1367,8 @@ function renderAnswer(r, c = capture(), compact = false) {
       if (compact) window.focus();
     }, "control evidence-link"));
   }
+  const suggested = r.suggest?.thread ? cardByThread.get(r.suggest.thread) : null;
+  if (suggested) actions.append(button(`‘${r.suggest.label || suggested.displayTitle || suggested.focus.label}’ 카드 대화로 옮기기`, () => { if (isCurrent(c)) openThread(suggested.focus); }));
   if (actions.childElementCount) a.append(actions);
   const depthSource = { question: "바로 질문", domain: "영역별 설정", profile: "기본값" }[r.difficultySource];
   const requestedModel = r.model === null ? "omp 기본 모델" : typeof r.model === "string" ? r.model : null;
@@ -1284,75 +1378,279 @@ function renderAnswer(r, c = capture(), compact = false) {
 
 function newQuestion(question, auto = false, focus = null) {
   const requestId = typeof crypto.randomUUID === "function" ? crypto.randomUUID() : Array.from(crypto.getRandomValues(new Uint32Array(4)), (word) => word.toString(16).padStart(8, "0")).join("");
-  return { context: capture(), question, focus, key: questionKey(question, focus), auto, difficulty: auto ? "EASY" : "", requestId };
+  return { context: capture(), question, focus, auto, difficulty: auto ? "EASY" : "", requestId, thread: focus?.thread ?? "" };
 }
 
-/** 질문 대상은 명시하지 않으면 현재 선택을 따른다. 실행했으면 true. */
+const STAGE_TEXT = {
+  queued: "다른 설명이 끝나기를 기다리는 중이에요.",
+  planning: "질문을 분류하는 중이에요.",
+  explaining: "설명을 쓰는 중이에요.",
+};
+
+/** 질문 대상은 명시하지 않으면 현재 선택을 따른다. 진행 중이면 대기 질문으로 쌓는다. 접수했으면 true. */
 function ask(question, options = {}) {
-  if (!current || !profilesReady || historyLoading || state.busy || !question.trim()) return false;
+  if (!current || !profilesReady || historyLoading || !question.trim()) return false;
   const focus = Object.hasOwn(options, "focus") ? options.focus : state.focus;
-  const job = { ...newQuestion(question.trim(), false, focus), ...options, focus, thread: currentThread() };
-  for (let i = autoQueue.length - 1; i >= 0; i--) if (autoQueue[i].key === job.key) autoQueue.splice(i, 1);
-  executeQuestion(job);
+  const job = { ...newQuestion(question.trim(), false, focus), ...options, focus, auto: false, thread: focus?.thread ?? "" };
+  if (state.busy) pendingQueue.push(job);
+  else startManual(job);
+  syncComposer();
   return true;
 }
 
-async function executeQuestion(job) {
-  if (!isCurrent(job.context) || state.busy) return;
-  activeAsk = job; state.busy = true;
-  state.status = job.auto ? "새 내용의 쉬운 설명을 준비하는 중이에요." : "세션 기록을 읽고 설명을 만드는 중이에요.";
-  let question = null, wait = null;
+/** 진행 중인 수동 설명이 끝나면 쌓인 대기 질문을 순서대로 시작한다. */
+function startNextQueued() {
+  renderQueue();
+  if (state.busy || !pendingQueue.length) return;
+  const job = pendingQueue.shift();
+  if (!isCurrent(job.context)) { startNextQueued(); return; }
+  manualJobs.push(job);
+  runJob(job);
+}
+
+/** 대기 질문 목록: 고치기는 입력창으로 되돌리고, 지우기는 버린다. */
+function renderQueue() {
+  const draw = (box) => {
+    if (!box) return;
+    box.replaceChildren();
+    for (const job of pendingQueue) {
+      const item = el("div", "queue-item");
+      item.append(el("span", "queue-text", job.displayQuestion || job.question));
+      item.append(button("고치기", () => {
+        const i = pendingQueue.indexOf(job);
+        if (i < 0) return;
+        pendingQueue.splice(i, 1);
+        setDraft(job.question, true);
+      }));
+      item.append(button("지우기", () => {
+        const i = pendingQueue.indexOf(job);
+        if (i >= 0) pendingQueue.splice(i, 1);
+        renderQueue();
+      }));
+      box.append(item);
+    }
+  };
+  draw($("#queueList"));
+  draw(pipWindow?.document.getElementById("pipQueue"));
+}
+
+let draftNotice = null;
+function renderDraftNotice() {
+  const draw = (box) => {
+    if (!box) return;
+    box.replaceChildren();
+    if (!draftNotice) return;
+    const { text, question } = draftNotice;
+    box.append(el("span", null, text), button("입력창에 다시 넣기", () => {
+      setDraft(state.draft ? `${state.draft} ${question}` : question, true);
+      draftNotice = null; renderDraftNotice();
+    }));
+  };
+  draw($("#draftNotice"));
+  draw(pipWindow?.document.getElementById("pipDraftNotice"));
+}
+
+/** Esc·중단 버튼: 진행 중인 수동 설명을 서버에서 멈춘다. 스트림의 cancelled가 마무리한다. */
+async function cancelActiveAsk() {
+  const job = activeAsk;
+  if (!job || job.cancelling) return;
+  job.cancelling = true;
+  state.status = "설명을 중단하는 중이에요."; syncComposer();
+  try {
+    const result = await api("/api/ask/cancel", "POST", { profileId: job.context.profileId, requestId: job.requestId });
+    if (result?.cancelled) finishJob(job, { type: "cancelled" });
+  } catch (e) {
+    if (isCurrent(job.context)) { state.status = `중단하지 못했어요: ${e.message}`; syncComposer(); }
+  } finally { job.cancelling = false; }
+}
+
+/** ⌘Enter·지금 바로잡기: 진행 중인 설명에 보정 문장을 보낸다. */
+async function steerActiveAsk() {
+  const job = activeAsk, message = state.draft.trim().slice(0, 2000);
+  if (!job || !message || job.steering) return;
+  job.steering = true;
+  try {
+    await api("/api/ask/steer", "POST", { profileId: job.context.profileId, requestId: job.requestId, message });
+    addSteerLine(job, message);
+    setDraft("");
+  } catch (e) {
+    if (isCurrent(job.context)) { state.status = `바로잡기를 보내지 못했어요: ${e.message}`; syncComposer(); }
+  } finally { job.steering = false; }
+}
+
+function addSteerLine(job, message) {
+  if (!message || job.steerLines.has(message)) return;
+  job.steerLines.add(message);
+  job.steerBox?.append(el("div", "steer-line", `바로잡기: ${message}`));
+  syncPip();
+}
+
+/** 스트림으로 흘러온 설명을 진행 중 말풍선에 그린다. 최대 100ms에 한 번 다시 그린다. */
+function fillBubble(job, bubble) {
+  if (!bubble) return;
+  clearSurface(bubble);
+  if (job.text) bubble.append(markdown(job.text, job.context));
+  else bubble.append(el("div", "wait", STAGE_TEXT[job.stage] ?? "설명을 준비하는 중이에요."));
+}
+
+function scheduleBubble(job) {
+  if (job.renderTimer) return;
+  const delay = Math.max(0, 100 - (Date.now() - (job.lastRender ?? 0)));
+  job.renderTimer = setTimeout(() => {
+    job.renderTimer = null; job.lastRender = Date.now();
+    fillBubble(job, job.bubble);
+    if (job.pipBubble?.isConnected) fillBubble(job, job.pipBubble);
+  }, delay);
+}
+
+function resetJob(job) {
+  job.nodes?.forEach((node) => node.remove());
+  job.nodes = null; job.bubble = null; job.pipBubble = null; job.steerBox = null;
+  job.text = ""; job.stage = null; job.steerLines = new Set();
+  job.done = false; job.cancelling = false; job.steering = false; job.abort = null;
+}
+
+function startManual(job) {
+  manualJobs.push(job);
+  runJob(job);
+}
+
+async function runJob(job) {
+  if (!isCurrent(job.context) || job.abort?.signal.aborted) return;
+  job.abort = new AbortController();
+  job.stage ??= null; job.text ??= ""; job.steerLines ??= new Set();
+  if (!job.auto && !job.detached) {
+    activeAsk = job; state.busy = true;
+    state.status = STAGE_TEXT[job.stage] ?? "설명을 준비하는 중이에요.";
+  }
   const visible = () => chatOpen && currentThread() === job.thread;
   if (job.auto) {
-    job.card.querySelector(".event-error")?.remove();
-    eventState(job.card, state.status, "running");
+    job.card?.querySelector(".event-error")?.remove();
+    syncAutoCard(job);
   } else {
-    question = questionNode(job.displayQuestion || job.question, job.thread ? null : job.focus);
-    wait = el("div", "wait", state.status);
-    job.nodes = [question, wait];
-    if (visible()) toLog(job.nodes, true);
+    if (!job.nodes) {
+      const question = questionNode(job.displayQuestion || job.question, job.thread ? null : job.focus);
+      const steerBox = el("div", "steer-lines"), bubble = el("div", "a pending-answer");
+      job.steerBox = steerBox; job.bubble = bubble; job.nodes = [question, steerBox, bubble];
+      fillBubble(job, bubble);
+    }
+    if (visible() && !job.bubble.isConnected) toLog(job.nodes, true);
   }
   syncComposer();
+  const focus = job.focus ? { label: String(job.focus.label ?? "").slice(0, 200), text: excerpt(job.focus.text, 7800) } : null;
+  const body = { id: job.context.sessionId, profileId: job.context.profileId, question: job.question, requestId: job.requestId };
+  if (job.auto) body.auto = true;
+  if (focus) body.focus = focus;
+  if (job.difficulty) body.difficulty = job.difficulty;
+  if (!job.auto && !job.detached && !job.reattached) body.cards = [...eventCards.values()].slice(-40).map((card) => ({ thread: card.thread ?? "", label: card.displayTitle ?? card.focus.label }));
+  let outcome = null;
   try {
-    const focus = job.focus ? { label: job.focus.label.slice(0, 200), text: excerpt(job.focus.text, 7800) } : null;
-    const r = await api("/api/ask", "POST", { id: job.context.sessionId, profileId: job.context.profileId, question: job.question, auto: job.auto, requestId: job.requestId, ...(focus ? { focus } : {}), ...(job.difficulty ? { difficulty: job.difficulty } : {}) });
-    if (!isCurrent(job.context)) return;
-    wait?.remove(); pastByQ.set(job.key, r); job.nodes = null;
-    const record = { question: job.question, focus, answer: r, auto: job.auto, ts: new Date().toISOString() };
+    const res = await fetch("/api/ask", { method: "POST", headers: { "content-type": "application/json", accept: "application/x-ndjson" }, body: JSON.stringify(body), signal: job.abort.signal });
+    if (!res.ok) {
+      let error = `요청에 실패했어요 (${res.status}).`, cancelled = false;
+      outcome = cancelled ? { type: "cancelled" } : { type: "error", error, status: res.status };
+    } else {
+      const reader = res.body.getReader(), decoder = new TextDecoder();
+      let buffer = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          let msg;
+          try { msg = JSON.parse(line); } catch { continue; }
+          if (!isCurrent(job.context)) return;
+          if (msg.type === "queued") { job.stage = "queued"; scheduleBubble(job); }
+          else if (msg.type === "stage") { job.stage = msg.stage; scheduleBubble(job); }
+          else if (msg.type === "delta") { job.text += msg.text ?? ""; scheduleBubble(job); }
+          else if (msg.type === "steer") { addSteerLine(job, msg.message ?? ""); }
+          else if (msg.type === "reset") { job.text = ""; scheduleBubble(job); }
+          else if (["answer", "cancelled", "error"].includes(msg.type)) outcome = msg;
+          if (job.auto) syncAutoCard(job);
+          else if (job === activeAsk && ["queued", "stage"].includes(msg.type)) { state.status = STAGE_TEXT[job.stage] ?? state.status; syncComposer(); }
+        }
+      }
+      if (!outcome) outcome = { type: "error", error: "설명이 끝나기 전에 연결이 닫혔어요." };
+    }
+  } catch (e) {
+    if (e?.name === "AbortError" || !isCurrent(job.context)) return;
+    outcome = { type: "error", error: e.message };
+  }
+  if (!isCurrent(job.context)) return;
+  finishJob(job, outcome);
+}
+
+function finishJob(job, outcome) {
+  if (job.done) return;
+  job.done = true; job.abort?.abort();
+  if (job.renderTimer) { clearTimeout(job.renderTimer); job.renderTimer = null; }
+  if (outcome.type === "answer") {
+    const r = outcome.answer;
+    if (job.auto) {
+      job.answer = r;
+      if (job.card) attachCardAnswer(job.card, r);
+    } else {
+      job.nodes = null;
+      if (job.bubble?.isConnected) job.bubble.replaceWith(renderAnswer(r, job.context));
+    }
+    const record = { question: job.question, display: job.displayQuestion || undefined, focus: job.focus ? { label: String(job.focus.label ?? "").slice(0, 200), text: excerpt(job.focus.text, 7800) } : null, answer: r, auto: job.auto, thread: r.thread ?? job.thread, steers: job.steerLines?.size ? [...job.steerLines] : undefined, ts: new Date().toISOString() };
     threadRecords.push(record);
-    if (job.card) attachCardAnswer(job.card, r);
+    if (record.thread) pastByThread.set(record.thread, r);
     if (chatOpen && inThread(record, currentThread())) {
-      if (job.auto) toLog([questionNode(displayOf(job.question)), renderAnswer(r, job.context)]);
-      else if (visible()) toLog([renderAnswer(r, job.context)]);
-      else renderThread();
+      if (job.auto) toLog([questionNode(job.displayQuestion || displayOf(job.question)), renderAnswer(r, job.context)]);
+      else if (currentThread() !== job.thread) renderThread();
       state.latest = r;
     }
-    state.status = job.auto ? "" : "답변을 받았어요."; loadGlossary();
+    if (job === activeAsk) state.status = "답변을 받았어요.";
+    loadGlossary(); loadPrefetch();
     if (view === "review") showReview();
-  } catch (e) {
-    if (!isCurrent(job.context)) return;
-    wait?.remove(); job.nodes = null; state.status = `답하지 못했어요: ${e.message}`;
-    if (job.auto) eventState(job.card, "쉬운 설명을 준비하지 못했어요. 원문을 설명으로 대신하지 않아요. 아래에서 다시 요청할 수 있어요.", "failed");
-    const error = el("div", "a err event-error", state.status);
+  } else if (outcome.type === "cancelled") {
+    job.nodes?.forEach((node) => node.remove()); job.nodes = null;
+    if (job.auto) {
+      if (job.card) eventState(job.card, "", "ready");
+    } else if (!job.detached) {
+      if (!state.draft) setDraft(job.question);
+      else { draftNotice = { text: "보낸 질문을 중단했어요.", question: job.question }; renderDraftNotice(); }
+      if (job === activeAsk) state.status = "설명을 중단했어요.";
+    }
+  } else {
+    const message = `답하지 못했어요: ${outcome.error || "알 수 없는 오류"}`;
+    if (job.auto) {
+      if (job.card) eventState(job.card, "쉬운 설명을 준비하지 못했어요. 원문을 설명으로 대신하지 않아요. 아래에서 다시 요청할 수 있어요.", "failed");
+    } else if (job === activeAsk) state.status = message;
+    const error = el("div", "a err event-error", message);
     const retry = button("같은 요청 결과 다시 확인", () => {
-      if (!isCurrent(job.context) || state.busy) return;
-      error.remove(); question?.remove(); executeQuestion(job);
+      if (!isCurrent(job.context) || (!job.auto && state.busy)) return;
+      error.remove(); resetJob(job);
+      if (job.auto) { autoJobs.set(job.requestId, job); runJob(job); }
+      else startManual(job);
     });
     const newAsk = button("새 설명 요청", () => {
-      if (!isCurrent(job.context) || state.busy) return;
-      error.remove(); question?.remove();
-      executeQuestion({ ...newQuestion(job.question, job.auto, job.focus), difficulty: job.difficulty, card: job.card, displayQuestion: job.displayQuestion });
+      if (!isCurrent(job.context) || (!job.auto && state.busy)) return;
+      error.remove();
+      const fresh = { ...newQuestion(job.question, job.auto, job.focus), difficulty: job.difficulty, card: job.card, displayQuestion: job.displayQuestion, thread: job.thread };
+      if (job.auto) { autoJobs.set(fresh.requestId, fresh); runJob(fresh); }
+      else startManual(fresh);
     });
-    error.append(el("p", "notice", e.serverResponse
+    error.append(el("p", "notice", outcome.status
       ? "서버가 실패를 알려왔어요. 같은 요청 번호는 저장된 답변이나 실패 결과를 다시 확인해요. 모델에 다시 물으려면 새 설명을 요청해 주세요."
-      : "결과를 받지 못했지만 이전 요청은 진행 중일 수 있어요. 같은 요청 번호로 결과를 확인하면 학습 기록이 중복되지 않아요."), retry);
-    if (e.serverResponse) error.append(newAsk);
-    if (job.auto) job.card.append(error); else if (visible()) toLog([error]); else question?.remove();
-  } finally {
-    if (isCurrent(job.context) && activeAsk === job) {
-      activeAsk = null; state.busy = false; syncComposer(); runAutoQueue();
-    }
+      : "결과를 받지 못했지만 이전 요청은 진행 중일 수 있어요. 같은 요청 번호로 결과를 확인하면 학습 기록이 중복되지 않아요."), retry, newAsk);
+    if (job.auto) job.card?.append(error);
+    else if (job.bubble?.isConnected) job.bubble.replaceWith(error);
+    else job.nodes?.forEach((node) => node.remove());
+    job.nodes = null;
   }
+  if (job.auto) autoJobs.delete(job.requestId);
+  else {
+    const i = manualJobs.indexOf(job);
+    if (i >= 0) manualJobs.splice(i, 1);
+    if (activeAsk === job) { activeAsk = null; state.busy = false; }
+  }
+  syncComposer();
+  startNextQueued();
 }
 
 function pipCapability() {
@@ -1406,15 +1704,18 @@ function buildPip(doc, win = doc.defaultView) {
   chatHead.append(chatChip, chatTitle, chatClose);
   const log = el("div", "pip-log"); log.id = "pipLog";
   const foot = el("div", "pip-foot"), status = el("div", "notice pip-status"); status.id = "pipStatus"; status.setAttribute("role", "status");
+  const draftNotice = el("div", "draft-notice"); draftNotice.id = "pipDraftNotice"; draftNotice.setAttribute("role", "status");
+  const queueList = el("div", "queue-list"); queueList.id = "pipQueue";
   const menu = el("details", "explain-menu"), chips = el("div", "chips"); chips.id = "pipChips";
   menu.append(el("summary", null, "바로 질문"), chips); createActionChips(chips);
-  const form = el("form", "pip-form composer"), input = el("input"), send = el("button", "send");
+  const form = el("form", "pip-form composer"), input = el("input"), steer = el("button", "control steer-btn"), send = el("button", "send");
   form.id = "pipForm"; input.id = "pipQ"; input.placeholder = "궁금한 걸 물어보세요"; input.autocomplete = "off"; input.setAttribute("aria-label", "도슨트에게 물어볼 질문");
-  send.id = "pipSend"; send.type = "submit"; send.title = "묻기"; send.setAttribute("aria-label", "묻기"); send.append($("#send svg").cloneNode(true));
-  form.append(input, menu, send); foot.append(status, form);
+  steer.id = "pipSteer"; steer.type = "button"; steer.hidden = true; steer.textContent = "지금 바로잡기";
+  send.id = "pipSend"; send.type = "submit"; send.title = "묻기"; send.setAttribute("aria-label", "묻기"); send.innerHTML = SEND_SVG;
+  form.append(input, menu, steer, send); foot.append(draftNotice, queueList, status, form);
   chat.append(chatHead, log, foot); main.append(work, chat);
   doc.body.append(head, main);
-  return { title, cards, workCount, chatChip, chatTitle, chatClose, log, status, input, send, form, cardsKey: "", threadKey: "" };
+  return { title, cards, workCount, chatChip, chatTitle, chatClose, log, status, input, steer, send, form, cardsKey: "", threadKey: "" };
 }
 
 async function togglePip() {
@@ -1430,7 +1731,16 @@ async function togglePip() {
     const markdownStyle = doc.createElement("link"); markdownStyle.rel = "stylesheet"; markdownStyle.href = new URL("/assets/docent-markdown.css", location.href).href; doc.head.append(markdownStyle);
     const ui = buildPip(doc, win), options = { signal: pipListeners.signal };
     ui.input.addEventListener("input", () => setDraft(ui.input.value), options);
+    ui.input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && state.busy && state.draft.trim()) { event.preventDefault(); steerActiveAsk(); }
+    }, options);
+    ui.steer.addEventListener("click", () => steerActiveAsk(), options);
+    ui.send.addEventListener("click", () => { if (state.busy) cancelActiveAsk(); }, options);
     ui.form.addEventListener("submit", (event) => { event.preventDefault(); submitDraft(); }, options);
+    doc.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || doc.querySelector("dialog[open]")) return;
+      if (state.busy) { event.preventDefault(); cancelActiveAsk(); }
+    }, options);
     win.addEventListener("pagehide", () => releasePip(win), { once: true, signal: pipListeners.signal });
     pipUI = ui;
     applyTheme(); syncComposer();
@@ -1452,31 +1762,37 @@ function syncPip() {
   ui.status.textContent = state.status || (current ? "" : "본문에서 세션을 골라 주세요.");
   if (ui.input.value !== state.draft) ui.input.value = state.draft;
   ui.input.disabled = !current || !profilesReady || historyLoading || !chatOpen;
-  ui.send.disabled = ui.input.disabled || state.busy;
-  ui.chatTitle.textContent = chatOpen ? (state.focus?.label ?? "세션 전체 대화") : "대화";
+  ui.send.disabled = ui.input.disabled;
+  ui.send.type = state.busy ? "button" : "submit";
+  ui.send.innerHTML = state.busy ? STOP_SVG : SEND_SVG;
+  const sendLabel = state.busy ? "설명 중단" : "묻기";
+  ui.send.setAttribute("aria-label", sendLabel); ui.send.title = sendLabel;
+  ui.steer.hidden = !(state.busy && state.draft.trim());
+  ui.chatTitle.textContent = chatOpen ? (state.focus?.card?.displayTitle ?? state.focus?.label ?? "세션 전체 대화") : "대화";
   ui.chatChip.replaceChildren(...(chatOpen && state.focus?.card ? [catChip(state.focus.card.dataset.eventType)] : []));
   ui.chatClose.hidden = !chatOpen;
   // 작업 내용(미니): 최신이 위. 카드 제목·즐겨찾기·선택이 바뀌면 다시 그린다.
   const cards = [...eventCards.values()].reverse(), selected = state.focus?.card ?? null;
-  const cardsKey = [scope, ...cards.map((card) => `${card.dataset.eventType}\u0001${card.focus.label}\u0001${favoriteTexts.has(threadOf(card.focus)) ? 1 : 0}\u0001${card === selected ? 1 : 0}`)].join("\u0002");
+  const cardsKey = [scope, ...cards.map((card) => `${card.dataset.eventType}\u0001${card.displayTitle ?? card.focus.label}\u0001${card.thread && favoriteThreads.has(card.thread) ? 1 : 0}\u0001${card === selected ? 1 : 0}`)].join("\u0002");
   if (cardsKey !== ui.cardsKey) {
     ui.cardsKey = cardsKey; ui.cards.replaceChildren(); ui.workCount.textContent = cards.length ? String(cards.length) : "";
     for (const card of cards) {
       const on = card === selected;
       const row = button("", () => { if (!isCurrent(c)) return; openThread(card.focus); if (!ui.input.disabled) ui.input.focus(); }, `pip-card${on ? " on" : ""}`);
-      row.title = card.focus.label; row.setAttribute("aria-pressed", String(on));
-      row.append(catChip(card.dataset.eventType), el("span", "pip-card-title", card.focus.label));
-      if (favoriteTexts.has(threadOf(card.focus))) { const fav = el("span", "pip-fav"); fav.innerHTML = STAR_SVG; fav.setAttribute("role", "img"); fav.setAttribute("aria-label", "즐겨찾기"); row.append(fav); }
+      row.title = card.displayTitle ?? card.focus.label; row.setAttribute("aria-pressed", String(on));
+      row.append(catChip(card.dataset.eventType), el("span", "pip-card-title", card.displayTitle ?? card.focus.label));
+      if (card.thread && favoriteThreads.has(card.thread)) { const fav = el("span", "pip-fav"); fav.innerHTML = STAR_SVG; fav.setAttribute("role", "img"); fav.setAttribute("aria-label", "즐겨찾기"); row.append(fav); }
       ui.cards.append(row);
     }
     if (!cards.length) ui.cards.append(el("p", "empty", current ? "AI의 질문, 결과, 계획이 도착하면 여기에 쌓여요." : "세션을 고르면 작업 내용이 열려요."));
   }
   // 대화(미니): 현재 스레드의 문답과 진행 중인 수동 요청.
   const rows = chatOpen ? threadRecords.filter((record) => inThread(record, key)) : [];
-  const pending = chatOpen && activeAsk && !activeAsk.auto && activeAsk.thread === key ? activeAsk.requestId : "";
-  const threadKey = `${scope}\u0001${chatOpen ? 1 : 0}\u0001${key}\u0001${rows.length}\u0001${pending}`;
+  const pending = chatOpen ? manualJobs.filter((job) => job.thread === key && job.nodes) : [];
+  const threadKey = `${scope}\u0001${chatOpen ? 1 : 0}\u0001${key}\u0001${rows.length}\u0001${pending.map((job) => `${job.requestId}:${job.steerLines?.size ?? 0}`).join(",")}`;
   if (threadKey === ui.threadKey) return;
   ui.threadKey = threadKey; clearSurface(ui.log);
+  for (const job of pending) job.pipBubble = null;
   if (!chatOpen) {
     const intro = el("div", "chat-intro");
     intro.append(el("p", null, current ? "작업 내용에서 카드를 누르면 그 내용의 대화가 열려요." : "본문에서 세션을 골라 주세요."));
@@ -1484,8 +1800,23 @@ function syncPip() {
     ui.log.append(intro);
     return;
   }
-  for (const r of rows) ui.log.append(questionNode(displayOf(r.question), key ? null : r.focus), renderAnswer(r.answer, c, true));
-  if (pending) ui.log.append(questionNode(activeAsk.displayQuestion || activeAsk.question, key ? null : activeAsk.focus), el("div", "wait", state.status));
+  for (const r of rows) {
+    ui.log.append(questionNode(r.display || displayOf(r.question), key ? null : r.focus));
+    if (r.steers?.length) {
+      const lines = el("div", "steer-lines");
+      for (const message of r.steers) lines.append(el("div", "steer-line", `바로잡기: ${message}`));
+      ui.log.append(lines);
+    }
+    ui.log.append(renderAnswer(r.answer, c, true));
+  }
+  for (const job of pending) {
+    const question = questionNode(job.displayQuestion || job.question, key ? null : job.focus);
+    const lines = el("div", "steer-lines");
+    for (const message of job.steerLines ?? []) lines.append(el("div", "steer-line", `바로잡기: ${message}`));
+    const bubble = el("div", "a pending-answer");
+    job.pipBubble = bubble; fillBubble(job, bubble);
+    ui.log.append(question, lines, bubble);
+  }
   if (!ui.log.childElementCount) ui.log.append(el("div", "empty", key ? "이 내용에 대해 궁금한 걸 물어보세요." : "이 세션 전체에 대해 궁금한 걸 물어보세요."));
   ui.log.scrollTop = ui.log.scrollHeight;
 }
@@ -1622,11 +1953,30 @@ $("#refreshBtn").onclick = async () => {
   try { await loadSessions(); if (isCurrent(c) && current) await select(sessions.find((s) => s.id === current.id) ?? current); }
   finally { $("#refreshBtn").disabled = false; }
 };
-$("#auto").checked = saved("auto") !== "0";
-$("#auto").onchange = () => { remember("auto", $("#auto").checked ? "1" : "0"); if (!$("#auto").checked) clearAutoQueue(); updateAutoStatus(); };
+$("#auto").onchange = async () => {
+  const c = capture(), on = $("#auto").checked;
+  $("#autoStatus").textContent = "저장 중.";
+  try {
+    const p = await api(`/api/profiles/${encodeURIComponent(c.profileId)}`, "PATCH", { autoExplain: on });
+    profiles = profiles.map((entry) => entry.id === p.id ? p : entry);
+    if (isCurrent(c)) $("#autoStatus").textContent = "저장됨. 새 사건부터 적용.";
+  } catch (e) {
+    if (isCurrent(c)) $("#autoStatus").textContent = `자동 설명 설정을 저장하지 못했어요: ${e.message}`;
+  } finally { if (profileId === c.profileId) { renderProfiles(); loadPrefetch(); } }
+};
+$("#send").onclick = () => { if (state.busy) cancelActiveAsk(); };
+$("#steer").onclick = () => steerActiveAsk();
+$("#q").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && state.busy && state.draft.trim()) { e.preventDefault(); steerActiveAsk(); }
+});
 $("#pipBtn").onclick = togglePip;
 $("#evidenceClose").onclick = () => closeEvidence();
-document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#evidencePanel").hidden) closeEvidence(); });
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (!$("#evidencePanel").hidden) { closeEvidence(); return; }
+  if (document.querySelector("dialog[open]")) return;
+  if (state.busy) { e.preventDefault(); cancelActiveAsk(); }
+});
 window.addEventListener("pagehide", (event) => { stream?.close(); pipWindow?.close(); if (!event.persisted) unmountMarkdown(document); });
 window.addEventListener("pageshow", (e) => { if (e.persisted && current) select(current); });
 applyTheme(); updatePipButton();
@@ -1635,7 +1985,7 @@ async function initialize() {
   renderSessions();
   if (!current && profilesReady) { const s = sessions.find((entry) => entry.id === saved("session")); if (s) await select(s); }
 }
-initialize(); setInterval(() => { renderRefreshed(); loadSessions(); updateAutoStatus(); }, 15000);
+initialize(); setInterval(() => { renderRefreshed(); loadSessions(); loadPrefetch(); }, 15000);
 </script>
 </body>
 </html>

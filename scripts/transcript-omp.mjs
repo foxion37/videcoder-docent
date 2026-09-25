@@ -4,7 +4,7 @@
 // module: import { normalizeOmpSession } from "./transcript-omp.mjs"
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { errorSummary } from "./event-text.mjs";
+import { askQuestionLines, errorSummary } from "./event-text.mjs";
 import { sourceWriter } from "./transcript-source.mjs";
 
 const ERROR_LINES = 8;
@@ -40,7 +40,8 @@ export function normalizeOmpSession(jsonl, source = "") {
 	}
 
 	const toolLines = (entry, call, part) => {
-		const line = `→ ${call.name}(${summarizeArgs(call.arguments)})`;
+		const questions = call.name === "ask" ? askQuestionLines(call.arguments?.questions) : [];
+		const line = [`→ ${call.name}(${summarizeArgs(call.arguments)})`, ...questions].join("\n");
 		const out = [mark(entry, line, { role: "assistant", part })];
 		const result = results.get(call.id);
 		if (!result) return [...out, "  (결과 없음)"];

@@ -1,24 +1,30 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { dialogueContext, parseFocus, recentDialogue, threadRecords } from "../app/dialogue.mjs";
+import { focusOfEvent, parseCards, parseFocus, recentDialogue, threadKey, threadRecords } from "../app/dialogue.mjs";
 
 const record = (n, extra = {}) => ({ question: `질문 ${n}`, answer: { headline: `결론 ${n}`, explain: `설명 ${n}` }, ...extra });
 
-test("follow-ups see the chosen focus and the latest six conversation turns, never automatic explanations", () => {
+test("the classifier sees the latest six turns the user actually read in the thread, including pre-explanations and corrections", () => {
 	const records = [
-		...Array.from({ length: 7 }, (_, n) => record(n)),
+		...Array.from({ length: 6 }, (_, n) => record(n)),
 		record("자동", { auto: true }),
-		record("대상", { focus: { label: "로그인 방식 선택", text: "이메일과 소셜 중 선택" } }),
+		record("보정", { steers: ["리얼타임 질문 말이야"] }),
 	];
 	const recent = recentDialogue(records);
-	assert.deepEqual(recent.map((turn) => turn.question), ["질문 2", "질문 3", "질문 4", "질문 5", "질문 6", "질문 대상"]);
-	assert.equal(recent.at(-1).focus, "로그인 방식 선택");
-	const focus = parseFocus({ label: " 로그인 방식 선택 ", text: "이메일과 소셜 로그인 중 무엇을 쓸까요?" });
-	assert.deepEqual(focus, { label: "로그인 방식 선택", text: "이메일과 소셜 로그인 중 무엇을 쓸까요?" });
-	const context = dialogueContext(focus, records);
-	assert.match(context, /이메일과 소셜 로그인 중 무엇을 쓸까요\?/);
-	assert.doesNotMatch(context, /질문 자동/);
-	assert.match(dialogueContext(null, []), /세션 전체에 대한 질문/);
+	assert.deepEqual(recent.map((turn) => turn.question), ["질문 2", "질문 3", "질문 4", "질문 5", "질문 자동", "질문 보정"]);
+	assert.deepEqual(recent.at(-1).steers, ["리얼타임 질문 말이야"]);
+});
+
+test("a card event and the answers asked about it share one server-issued thread", () => {
+	const { focus, thread } = focusOfEvent({ kind: "question", sub: "question", text: "보유 계정 기준으로 어디에 리얼타임을 둘까?", options: [{ label: "Supabase Realtime", description: "이미 보유" }, { label: "Colyseus Cloud" }] });
+	assert.match(focus.text, /Supabase Realtime — 이미 보유/);
+	assert.match(focus.text, /Colyseus Cloud/);
+	assert.match(thread, /^[a-f0-9]{16}$/);
+	// 브라우저가 보낸 질문 대상이 공백만 달라도 같은 스레드다.
+	assert.equal(threadKey(focus.text.replace(/\n/g, "\n\n")), thread);
+	assert.equal(threadKey(""), "");
+	assert.deepEqual(parseCards([{ thread, label: " 리얼타임 위치 " }]), [{ thread, label: "리얼타임 위치" }]);
+	assert.throws(() => parseCards([{ thread: "../x", label: "a" }]), { status: 400 });
 });
 
 test("a malformed focus is rejected instead of silently asking about the whole session", () => {

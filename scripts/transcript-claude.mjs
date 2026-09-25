@@ -5,10 +5,10 @@
 // CLI:    scripts/transcript-claude.mjs <session.jsonl> [out.md]
 // module: import { normalizeClaudeSession, readClaudeSessionMeta, readClaudeSubagents } from "./transcript-claude.mjs"
 import { readFileSync, writeFileSync } from "node:fs";
-import { readFile, readdir } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import { basename, dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { errorSummary } from "./event-text.mjs";
+import { askQuestionLines, errorSummary } from "./event-text.mjs";
 import { boundSourceBlocks, sourceWriter } from "./transcript-source.mjs";
 
 const ERROR_LINES = 8;
@@ -94,6 +94,28 @@ export async function readClaudeSubagents(sessionPath) {
 	return out;
 }
 
+/**
+ * 서브에이전트 전사 파일들의 이름·크기·수정 시각 요약. 내용은 읽지 않는다.
+ * 본 세션 파일이 그대로여도 서브에이전트가 진행되면 값이 바뀌어 정규화 캐시를 새로 만든다.
+ */
+export async function claudeSubagentStamp(sessionPath) {
+	const root = join(dirname(sessionPath), basename(sessionPath, ".jsonl"), "subagents");
+	const parts = [];
+	const walk = async (dir) => {
+		const ents = await readdir(dir, { withFileTypes: true }).catch(() => []);
+		for (const d of ents) {
+			const p = join(dir, d.name);
+			if (d.isDirectory()) await walk(p);
+			else if (/^agent-.*\.(jsonl|meta\.json)$/.test(d.name)) {
+				const st = await stat(p).catch(() => null);
+				if (st) parts.push(`${relative(root, p)}:${st.size}:${st.mtimeMs}`);
+			}
+		}
+	};
+	await walk(root);
+	return parts.sort().join("|");
+}
+
 const toolResults = (entries) => {
 	const results = new Map();
 	for (const entry of entries) {
@@ -104,7 +126,8 @@ const toolResults = (entries) => {
 };
 
 const toolBlocks = (entry, call, results, mark, prefix = "") => {
-	const out = [mark(entry, `${prefix}→ ${call.name}(${summarizeInput(call.input)})`, { role: "assistant", part: `tool:${call.id}` })];
+	const questions = call.name === "AskUserQuestion" ? askQuestionLines(call.input?.questions) : [];
+	const out = [mark(entry, [`${prefix}→ ${call.name}(${summarizeInput(call.input)})`, ...questions.map((line) => prefix + line)].join("\n"), { role: "assistant", part: `tool:${call.id}` })];
 	const found = results.get(call.id);
 	if (!found) return [...out, `${prefix}  (결과 없음)`];
 	const r = found.result;
