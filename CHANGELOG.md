@@ -2,6 +2,11 @@
 
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/). 버전은 [SemVer](https://semver.org/lang/ko/). 0.x 동안은 minor 가 새 기능, patch 가 고침.
 
+## [0.16.3] — 2026-09-25
+
+### 변경
+- 세션 목록 카드 제목(16→14px)과 작업 내용 카드 제목(17→15px) 글자를 2px씩 줄임.
+
 ## [0.16.2] — 2026-09-25
 
 ### 변경
