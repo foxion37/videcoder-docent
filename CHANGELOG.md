@@ -2,6 +2,11 @@
 
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/). 버전은 [SemVer](https://semver.org/lang/ko/). 0.x 동안은 minor 가 새 기능, patch 가 고침.
 
+## [0.16.13] — 2026-09-26
+
+### 추가
+- 세션 목록 하단에 아주 작은 정보 줄: 버전(서버가 package.json 에서 읽어 표시), 제작자 foxion37, 스튜디오 싱앤몽(singandmong.com 링크), GitHub 저장소 아이콘 링크. 세션 목록을 접으면 함께 숨김.
+
 ## [0.16.12] — 2026-09-26
 
 ### 추가

@@ -1,6 +1,7 @@
 // 도슨트 로컬 웹앱. 서버는 Node 내장 모듈, 설명 렌더러는 로컬 빌드 자산을 사용한다.
 import { execFile } from "node:child_process";
 import { mkdtemp, open, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import { homedir, tmpdir } from "node:os";
@@ -28,6 +29,8 @@ import { jobRegistry } from "./jobs.mjs";
 import { prefetchHub } from "./prefetch.mjs";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
+// 화면 하단 정보 줄에 보여 줄 버전. 설치 패키지와 저장소 모두 package.json 이 함께 온다.
+const VERSION = JSON.parse(readFileSync(join(ROOT, "../package.json"), "utf8")).version;
 const STATIC_ASSETS = new Map([
 	["/assets/docent-markdown.js", ["assets/docent-markdown.js", "text/javascript; charset=utf-8"]],
 	["/assets/docent-markdown.css", ["assets/docent-markdown.css", "text/css; charset=utf-8"]],
@@ -482,7 +485,8 @@ const handler = async (req, res) => {
 	try {
 		if (req.method === "GET" && url.pathname === "/") {
 			res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" });
-			return res.end(await readFile(join(ROOT, "index.html")));
+			// 화면의 버전 표시 칸을 package.json 버전으로 채운다.
+			return res.end((await readFile(join(ROOT, "index.html"), "utf8")).replaceAll("__DOCENT_VERSION__", VERSION));
 		}
 		if (req.method === "GET" && url.pathname === "/favicon.svg") {
 			res.writeHead(200, { "content-type": "image/svg+xml", "cache-control": "no-cache" });
