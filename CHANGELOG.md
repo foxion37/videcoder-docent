@@ -2,6 +2,11 @@
 
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/). 버전은 [SemVer](https://semver.org/lang/ko/). 0.x 동안은 minor 가 새 기능, patch 가 고침.
 
+## [0.16.19] — 2026-09-26
+
+### 변경
+- AI 출력 칸의 핀·접기 버튼을 머리줄 오른쪽 끝으로 정렬.
+
 ## [0.16.18] — 2026-09-26
 
 ### 변경
