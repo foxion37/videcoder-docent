@@ -75,7 +75,9 @@
   .header-actions { flex:none; display:flex; align-items:center; gap:8px }
   .auto { display:flex; align-items:center; gap:4px; flex:none; color:var(--mute); font-size:13px; white-space:nowrap; cursor:pointer }
   .auto input { flex:none; margin:0; padding:0 }
-  #log { flex:1; overflow:auto; scrollbar-gutter:stable; padding:20px 22px; display:flex; flex-direction:column; gap:28px }
+  #log { flex:1; overflow:auto; scrollbar-gutter:stable; padding:0 22px 20px; display:flex; flex-direction:column; gap:28px }
+  /* 위쪽 여백을 칸 안쪽(padding) 대신 첫 자식의 여백으로 둔다. 고정 칸이 스크롤해도 화면 맨 위까지 붙을 수 있게 */
+  #log > :first-child { margin-top:20px }
   .thread-source { flex:none; align-self:stretch; box-sizing:border-box; background:var(--pane-work); border:1px solid var(--line); border-radius:12px; padding:12px 16px }
   /* 대화의 출력 칸(AI 출력·도슨트 답)은 오른쪽 아래 손잡이로 크기를 바꿀 수 있다. 줄어들지 않도록 flex:none. 좁은 창에서는 최소 너비도 창 안으로 줄어든다. */
   #log .a, #log .thread-source { flex:none; overflow:auto; resize:both; min-width:min(240px, 100%); min-height:48px }
@@ -86,16 +88,14 @@
   .thread-fold svg { transition:transform .15s }
   .thread-fold[aria-expanded="false"] svg { transform:rotate(180deg) }
   .thread-pin[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:var(--on-accent) }
-  /* 접힌 칸은 머리줄 하나뿐이다. 높이 최소값을 풀고 툴팁이 칸 밖으로 나갈 수 있게 넘침을 연다. */
+  /* 접힌 칸은 본문만 숨긴다. 위아래 여백은 펼친 상태와 같게 둬 누르지 전후로 흔들리지 않게 한다. */
   #log .thread-source.collapsed { overflow:visible; min-height:0 }
-  .thread-source.collapsed { padding:8px 16px }
   .thread-source.collapsed .thread-source-head { margin-bottom:0 }
   .thread-source.collapsed .thread-source-body { display:none }
-  /* 핀: 대화 맨 위에 전체 폭으로 붙아 있고, 아래 글이 그 밑으로 흐른다. 로그 안쪽 여백까지 꽉 채운다. */
-  /* 핀: 원문 칸이 대화 위쪽에 공간을 차지한 채 고정되고, 대화는 그 아래 영역에서 스크롤된다(static과 같은 배치) */
-  #logWrap { flex:1; min-height:0; position:relative; display:flex; flex-direction:column }
-  .thread-source.pinned { flex:none; margin:0 22px 12px; max-height:45%; overflow:auto; box-shadow:0 6px 20px #0002 }
-  .thread-source.pinned.collapsed { overflow:visible; max-height:none }
+  /* 핀: 칸은 기본 자리(대화 맨 위)에 그대로 있고, 스크롤하면 그 자리에 붙어 따라온다 */
+  .thread-source.pinned { position:sticky; top:0; z-index:5; max-height:100% }
+  /* 대화 칸: 기본으로 가장 최근 대화를 따라가고, 위로 올리면 입력창 가운데 아래 화살표가 나타난다 */
+  #logWrap { flex:1; min-height:0; position:relative; display:flex }
   #logJump { position:absolute; left:50%; transform:translateX(-50%); bottom:14px; z-index:6; box-shadow:0 4px 14px #0003 }
   /* 세션 목록 탭: 전체와 peer(Tailscale 기기)별로 목록을 나눈다 */
   .side-tabs { flex:none; display:flex; flex-wrap:wrap; gap:4px; padding:8px 16px 0 }
@@ -974,7 +974,7 @@ function invalidateContext() {
   activeAsk = null; state.busy = false; historyLoading = false;
   pastByThread.clear(); glossary = []; threadRecords = []; chatOpen = false; favoriteThreads.clear(); cardByThread.clear();
   eventCards.clear(); termDialog?.close();
-  clearPinnedSource(); logStick = true;
+  logStick = true;
   state.latest = null; state.focus = null; state.draft = ""; state.status = "";
   prefetchInfo = null; prefetchFailed = false; draftNotice = null;
   closeEvidence(false); setStage();
@@ -1384,12 +1384,8 @@ function threadSource(key, c, controls = true) {
   if (card.source.options?.length) body.append(optionList(card.source.options, c));
   const st = controls ? threadViewState(key) : null;
   if (st) {
-    // 접기와 핀은 대화를 다시 그리지 않고 이 칸의 모양과 자리만 바꾼다. 다시 그리면 대화 위치가 미묘하게 흔들린다.
-    const pin = button("", () => {
-      st.pinned = !st.pinned;
-      (st.pinned ? $("#logWrap") : $("#log")).prepend(box);
-      applyView();
-    }, "icon-btn small thread-pin");
+    // 접기와 핀은 대화를 다시 그리거나 칸을 옮기지 않고, 이 칸의 모양만 바꾼다.
+    const pin = button("", () => { st.pinned = !st.pinned; applyView(); }, "icon-btn small thread-pin");
     pin.innerHTML = PIN_SVG;
     const fold = button("", () => { st.collapsed = !st.collapsed; applyView(); }, "icon-btn small thread-fold");
     fold.innerHTML = FOLD_SVG;
@@ -1397,8 +1393,8 @@ function threadSource(key, c, controls = true) {
       box.classList.toggle("pinned", st.pinned);
       box.classList.toggle("collapsed", st.collapsed);
       pin.setAttribute("aria-pressed", String(st.pinned));
-      pin.setAttribute("aria-label", st.pinned ? "고정 해제" : "대화 위에 고정");
-      pin.dataset.tip = st.pinned ? "고정 해제" : "대화 위에 고정";
+      pin.setAttribute("aria-label", st.pinned ? "고정 해제" : "스크롤해도 고정");
+      pin.dataset.tip = st.pinned ? "고정 해제" : "스크롤해도 고정";
       fold.setAttribute("aria-expanded", String(!st.collapsed));
       fold.setAttribute("aria-label", st.collapsed ? "AI 출력 펼치기" : "AI 출력 접기");
       fold.dataset.tip = st.collapsed ? "펼치기" : "접기";
@@ -1425,11 +1421,8 @@ function renderThread({ top = false } = {}) {
   const c = capture(), log = $("#log"), key = currentThread();
   const wasNearBottom = isLogAtBottom();
   clearSurface(log);
-  clearPinnedSource();
   const source = threadSource(key, c);
-  // 핀으로 고정하면 대화 스크롤 영역 위의 블록으로, 아니면 대화 맨 위 메시지로 둔다.
-  if (source && threadViewState(key).pinned) $("#logWrap").prepend(source);
-  else if (source) log.append(source);
+  if (source) log.append(source);
   const base = log.childElementCount;
   const rows = threadRecords.filter((record) => inThread(record, key));
   for (const r of rows) {
@@ -1522,10 +1515,6 @@ const logFollow = new MutationObserver(() => {
   requestAnimationFrame(() => { followScheduled = false; followLog(); });
 });
 logFollow.observe($("#log"), { childList: true, subtree: true, characterData: true });
-/** 핀으로 고정한 AI 출력 칸은 대화 스크롤 영역(logWrap) 위에 블록으로 둔다. 다시 그리기 전에 치운다. */
-function clearPinnedSource() {
-  $("#logWrap").querySelectorAll(":scope > .thread-source").forEach((n) => n.remove());
-}
 
 function questionNode(text, focus) {
   const q = el("div", "q");
