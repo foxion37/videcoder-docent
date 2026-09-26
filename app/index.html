@@ -34,6 +34,9 @@
   .icon-btn svg { width:17px; height:17px }
   .icon-btn:hover { border-color:var(--accent); color:var(--accent-ink) }
   .icon-btn.on { background:var(--accent); border-color:var(--accent); color:var(--on-accent) }
+  /* 1x 모니터(1080p)에서 가는 아이콘 선이 지글거리지 않게 선을 살짝 굵게 유지한다 */
+  .icon-btn svg, .session-info summary svg, .explain-menu summary svg { stroke-width:2 }
+  .cat svg { stroke-width:2.4 }
   .icon-btn[data-tip]:hover::after, .icon-btn[data-tip]:focus-visible::after { content:attr(data-tip); position:absolute; z-index:10; top:calc(100% + 6px); right:0; white-space:nowrap; font-size:12px; font-weight:400; line-height:1.4; padding:4px 8px; border-radius:6px; background:var(--ink); color:var(--bg); pointer-events:none }
   .filter-row { padding:12px 16px; border-bottom:1px solid var(--line) }
   .side-title small { color:var(--mute); font-weight:400; margin-left:6px; font-variant-numeric:tabular-nums }
@@ -76,6 +79,17 @@
   /* 대화의 출력 칸(AI 출력·도슨트 답)은 오른쪽 아래 손잡이로 크기를 바꿀 수 있다. 줄어들지 않도록 flex:none. 좁은 창에서는 최소 너비도 창 안으로 줄어든다. */
   #log .a, #log .thread-source { flex:none; overflow:auto; resize:both; min-width:min(240px, 100%); min-height:48px }
   .thread-source-head { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:12px; font-weight:500; color:var(--mute) }
+  /* AI 출력 칸: 접으면 머리줄만, 핀을 누르면 대화 위에 떠 있는 고정 칸이 된다 */
+  .thread-source-head .icon-btn { width:22px; height:22px } .thread-source-head .icon-btn svg { width:12px; height:12px }
+  .thread-source-head .icon-btn[data-tip]:hover::after, .thread-source-head .icon-btn[data-tip]:focus-visible::after { top:calc(100% + 6px); left:50%; right:auto; transform:translateX(-50%) }
+  .thread-fold svg { transition:transform .15s }
+  .thread-fold[aria-expanded="false"] svg { transform:rotate(180deg) }
+  .thread-pin[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:var(--on-accent) }
+  .thread-source.collapsed { padding-bottom:12px }
+  .thread-source.pinned { position:absolute; top:12px; right:16px; left:auto; width:min(480px, 72%); max-height:calc(100% - 24px); z-index:7; box-shadow:0 10px 30px #0003; align-self:auto; background:var(--panel) }
+  /* 대화 칸: 기본으로 가장 최근 대화를 따라가고, 위로 올리면 맨 아래 화살표가 나타난다 */
+  #logWrap { flex:1; min-height:0; position:relative; display:flex }
+  #logJump { position:absolute; right:18px; bottom:14px; z-index:6; box-shadow:0 4px 14px #0003 }
   .thread-source ul { margin:8px 0 0; padding-left:20px } .thread-source li { margin:3px 0 }
   /* AI가 제시한 선택지는 불릿 대신 "선택지 번호" 뱃지로 구별한다. 질문 말풍선과 같은 노란 바탕이다. */
   .thread-source ul.option-list { list-style:none; padding:0; margin:10px 0 0; display:flex; flex-direction:column; gap:8px }
@@ -444,13 +458,13 @@
       </div>
       <div id="chatBody" class="chat-body" hidden>
       <div class="pane-title chat-head"><h2 id="chatTitle">세션 전체 대화</h2><button id="threadStar" class="icon-btn small star" type="button" aria-pressed="false" aria-label="이 대화 즐겨찾기" data-tip="즐겨찾기"></button><button id="threadClose" class="icon-btn small" type="button" aria-label="대화 닫기" data-tip="대화 닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
-      <div id="log"></div>
+      <div id="logWrap"><div id="log"></div><button id="logJump" class="icon-btn" type="button" hidden aria-label="가장 최근 대화 보기" title="가장 최근 대화 보기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></button></div>
       <footer>
         <div id="draftNotice" class="draft-notice" role="status"></div>
         <div id="queueList" class="queue-list"></div>
         <div id="askStatus" class="notice" role="status"></div>
         <form id="form" class="composer">
-          <textarea id="q" rows="1" placeholder="궁금한 걸 물어보세요 (Shift+Enter 줄바꿈)" aria-label="도슨트에게 물어볼 질문" autocomplete="off" disabled></textarea>
+          <textarea id="q" rows="1" placeholder="질문 입력하기 (Shift+Enter 줄바꿈)" aria-label="도슨트에게 물어볼 질문" autocomplete="off" disabled></textarea>
           <details id="explainMenu" class="explain-menu"><summary>바로 질문</summary><div class="chips" id="chips"></div></details>
           <button id="steer" class="control steer-btn" type="button" hidden>지금 바로잡기</button>
           <button id="send" class="send" aria-label="묻기" title="묻기" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
@@ -648,7 +662,7 @@ function fitComposer(input) {
   input.style.height = `${Math.min(input.scrollHeight, 160)}px`;
 }
 
-const PLACEHOLDERS = { idle: "궁금한 걸 물어보세요 (Shift+Enter 줄바꿈)", loading: "이전 대화를 불러오는 중이에요" };
+const PLACEHOLDERS = { idle: "질문 입력하기 (Shift+Enter 줄바꿈)", loading: "이전 대화를 불러오는 중이에요" };
 const placeholderMeasure = document.createElement("canvas").getContext("2d");
 /** 입력창 폭에 맞게 안내 문구를 줄인다. Chrome 은 textarea placeholder 의 CSS 말줄임을 그리지 않으므로 직접 … 를 붙인다. */
 function fitPlaceholder(input, text) {
@@ -945,6 +959,7 @@ function invalidateContext() {
   activeAsk = null; state.busy = false; historyLoading = false;
   pastByThread.clear(); glossary = []; threadRecords = []; chatOpen = false; favoriteThreads.clear(); cardByThread.clear();
   eventCards.clear(); termDialog?.close();
+  clearPinnedSource(); logStick = true;
   state.latest = null; state.focus = null; state.draft = ""; state.status = "";
   prefetchInfo = null; prefetchFailed = false; draftNotice = null;
   closeEvidence(false); setStage();
@@ -1268,6 +1283,8 @@ const EVENT_ICON = {
   plan: '<path d="M9.5 6.5h10M9.5 12h10M9.5 17.5h10"/><circle cx="5" cy="6.5" r="1" fill="currentColor"/><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="5" cy="17.5" r="1" fill="currentColor"/>',
 };
 const STAR_SVG = '<svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9Z"/></svg>';
+const PIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15v6"/><path d="M8.5 3h7l-1.2 6.2 3.2 3.3a1 1 0 0 1-.7 1.7H7.2a1 1 0 0 1-.7-1.7l3.2-3.3L8.5 3Z"/></svg>';
+const FOLD_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg>';
 
 /** 카테고리마다 색과 아이콘을 다르게 해 한눈에 구분한다. */
 function catChip(type) {
@@ -1313,14 +1330,40 @@ function setStage() {
   $("#sessionThreadBtn").hidden = !current;
 }
 
-/** 카드의 사건 원문(AI 출력)을 그 카드 대화 맨 위에 보여 준다. 카드의 "출력 내용 보기"를 따로 열지 않아도 된다. */
-function threadSource(key, c) {
+/** 스레드별 AI 출력 칸 상태: 접음, 화면 고정(핀). 같은 카드를 다시 열어도 유지된다. */
+const threadViews = new Map();
+const threadViewState = (key) => {
+  if (!threadViews.has(key)) threadViews.set(key, { collapsed: false, pinned: false });
+  return threadViews.get(key);
+};
+
+/** 카드의 사건 원문(AI 출력)을 그 카드 대화 맨 위에 보여 준다. 접기와 핀(플로팅 고정)은 본문 대화에서만 쓴다. */
+function threadSource(key, c, controls = true) {
   const card = key ? cardByThread.get(key) : null;
   if (!card?.source) return null;
   const box = el("section", "thread-source"); box.setAttribute("aria-label", "AI 출력 내용");
   const head = el("div", "thread-source-head"); head.append(catChip(card.dataset.eventType), el("span", null, "AI 출력"));
-  box.append(head, markdown(card.source.text, c, {}, "event-original"));
-  if (card.source.options?.length) box.append(optionList(card.source.options, c));
+  const st = controls ? threadViewState(key) : null;
+  if (st) {
+    const pin = button("", () => { st.pinned = !st.pinned; renderThread(); }, "icon-btn small thread-pin");
+    pin.innerHTML = PIN_SVG;
+    pin.setAttribute("aria-pressed", String(st.pinned));
+    pin.setAttribute("aria-label", st.pinned ? "고정 해제" : "대화 위에 고정");
+    pin.dataset.tip = st.pinned ? "고정 해제" : "대화 위에 고정";
+    const fold = button("", () => { st.collapsed = !st.collapsed; renderThread(); }, "icon-btn small thread-fold");
+    fold.innerHTML = FOLD_SVG;
+    fold.setAttribute("aria-expanded", String(!st.collapsed));
+    fold.setAttribute("aria-label", st.collapsed ? "AI 출력 펼치기" : "AI 출력 접기");
+    fold.dataset.tip = st.collapsed ? "펼치기" : "접기";
+    head.append(pin, fold);
+    box.classList.toggle("pinned", st.pinned);
+    box.classList.toggle("collapsed", st.collapsed);
+  }
+  box.append(head);
+  if (!st?.collapsed) {
+    box.append(markdown(card.source.text, c, {}, "event-original"));
+    if (card.source.options?.length) box.append(optionList(card.source.options, c));
+  }
   return box;
 }
 
@@ -1336,9 +1379,13 @@ function optionList(options, c) {
 }
 
 function renderThread({ top = false } = {}) {
-  const c = capture(), log = $("#log"), key = currentThread(); clearSurface(log);
+  const c = capture(), log = $("#log"), key = currentThread();
+  const wasNearBottom = isLogAtBottom();
+  clearSurface(log);
+  clearPinnedSource();
   const source = threadSource(key, c);
-  if (source) log.append(source);
+  if (source && threadViewState(key).pinned) $("#logWrap").append(source);
+  else if (source) log.append(source);
   const base = log.childElementCount;
   const rows = threadRecords.filter((record) => inThread(record, key));
   for (const r of rows) {
@@ -1353,8 +1400,10 @@ function renderThread({ top = false } = {}) {
   for (const job of manualJobs) if (job.thread === key && job.nodes) log.append(...job.nodes);
   if (log.childElementCount === base) log.append(el("div", "empty", key ? "이 내용에 대해 궁금한 걸 물어보세요." : "이 세션 전체에 대해 궁금한 걸 물어보세요."));
   state.latest = rows.at(-1)?.answer ?? null;
-  // 카드를 막 열었으면 원문부터 보이게 맨 위에서 시작한다.
-  log.scrollTop = top && source ? 0 : log.scrollHeight;
+  // 카드를 막 열었으면 원문부터 보이게 맨 위에서 시작하고, 그 외에는 가장 최근 대화를 따라간다.
+  if (top && source) { logStick = false; log.scrollTop = 0; }
+  else if (logStick || wasNearBottom) followLog(true);
+  syncLogJump();
   syncComposer();
 }
 
@@ -1402,6 +1451,36 @@ function toFlow(node) {
   box.querySelector(":scope > .empty")?.remove();
   box.prepend(node);
   if (reading) box.scrollTop += box.scrollHeight - before;
+}
+
+/** 대화는 기본으로 가장 최근(맨 아래)을 따라간다. 위로 올려 읽으면 화살표 버튼으로 돌아온다. */
+let logStick = true, followScheduled = false;
+const logJump = $("#logJump");
+function isLogAtBottom() {
+  const log = $("#log");
+  return log.scrollHeight - log.scrollTop - log.clientHeight < 80;
+}
+function followLog(force = false) {
+  if (force) logStick = true;
+  if (logStick) $("#log").scrollTop = $("#log").scrollHeight;
+  syncLogJump();
+}
+function syncLogJump() {
+  const log = $("#log");
+  logJump.hidden = logStick || log.scrollHeight <= log.clientHeight + 4;
+}
+$("#log").addEventListener("scroll", () => { logStick = isLogAtBottom(); syncLogJump(); });
+logJump.addEventListener("click", () => followLog(true));
+// Markdown 이 비동기로 차오를 때도 맨 아래를 따라 간다. 읽던 위치를 지킨 사용자는 건드리지 않는다.
+const logFollow = new MutationObserver(() => {
+  if (followScheduled) return;
+  followScheduled = true;
+  requestAnimationFrame(() => { followScheduled = false; followLog(); });
+});
+logFollow.observe($("#log"), { childList: true, subtree: true, characterData: true });
+/** 핀으로 고정한 AI 출력 칸은 대화 칸이 아니라 그 아래(logWrap)에 떠 있다. 다시 그리기 전에 치운다. */
+function clearPinnedSource() {
+  $("#logWrap").querySelectorAll(":scope > .thread-source").forEach((n) => n.remove());
 }
 
 function questionNode(text, focus) {
@@ -1996,7 +2075,7 @@ function buildPip(doc, win = doc.defaultView) {
   menu.append(el("summary", null, "바로 질문"), chips); createActionChips(chips);
   const form = el("form", "pip-form composer"), input = el("textarea"), steer = el("button", "control steer-btn"), send = el("button", "send");
   input.rows = 1;
-  form.id = "pipForm"; input.id = "pipQ"; input.placeholder = "궁금한 걸 물어보세요"; input.autocomplete = "off"; input.setAttribute("aria-label", "도슨트에게 물어볼 질문");
+  form.id = "pipForm"; input.id = "pipQ"; input.placeholder = "질문 입력하기"; input.autocomplete = "off"; input.setAttribute("aria-label", "도슨트에게 물어볼 질문");
   steer.id = "pipSteer"; steer.type = "button"; steer.hidden = true; steer.textContent = "지금 바로잡기";
   send.id = "pipSend"; send.type = "submit"; send.title = "묻기"; send.setAttribute("aria-label", "묻기"); send.innerHTML = SEND_SVG;
   form.append(input, menu, steer, send); foot.append(draftNotice, queueList, status, form);
@@ -2086,7 +2165,7 @@ function syncPip() {
     ui.log.append(intro);
     return;
   }
-  const source = threadSource(key, c);
+  const source = threadSource(key, c, false);
   if (source) ui.log.append(source);
   const base = ui.log.childElementCount;
   for (const r of rows) {

@@ -1,13 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="geometricPrecision">
   <title>바이브코더 도슨트</title>
-  <rect width="64" height="64" rx="12" fill="#FFD600"/>
-  <!-- D(도슨트) 펀칭 + 안쪽 사선 하나(바이브코더의 V) -->
+  <rect width="32" height="32" rx="6" fill="#FFD600"/>
+  <!-- D(도슨트) 펀칭 + 안쪽 사선 하나(바이브코더의 V). 그림 크기를 화면 크기(32px)와 맞춰 1x 모니터에서도 또렷하게 -->
   <g fill="#111111">
-    <circle cx="18" cy="14" r="3.5"/><circle cx="27" cy="14" r="3.5"/><circle cx="36" cy="14" r="3.5"/>
-    <circle cx="18" cy="23" r="3.5"/><circle cx="45" cy="23" r="3.5"/>
-    <circle cx="18" cy="32" r="3.5"/><circle cx="45" cy="32" r="3.5"/>
-    <circle cx="18" cy="41" r="3.5"/><circle cx="45" cy="41" r="3.5"/>
-    <circle cx="18" cy="50" r="3.5"/><circle cx="27" cy="50" r="3.5"/><circle cx="36" cy="50" r="3.5"/>
-    <circle cx="36" cy="23" r="2.6"/><circle cx="31.5" cy="32" r="2.6"/><circle cx="27" cy="41" r="2.6"/>
+    <circle cx="9" cy="7" r="1.9"/><circle cx="13.5" cy="7" r="1.9"/><circle cx="18" cy="7" r="1.9"/>
+    <circle cx="9" cy="11.5" r="1.9"/><circle cx="22.5" cy="11.5" r="1.9"/>
+    <circle cx="9" cy="16" r="1.9"/><circle cx="22.5" cy="16" r="1.9"/>
+    <circle cx="9" cy="20.5" r="1.9"/><circle cx="22.5" cy="20.5" r="1.9"/>
+    <circle cx="9" cy="25" r="1.9"/><circle cx="13.5" cy="25" r="1.9"/><circle cx="18" cy="25" r="1.9"/>
+    <circle cx="18" cy="11.5" r="1.4"/><circle cx="15.75" cy="16" r="1.4"/><circle cx="13.5" cy="20.5" r="1.4"/>
   </g>
 </svg>
