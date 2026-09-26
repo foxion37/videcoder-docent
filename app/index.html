@@ -79,17 +79,28 @@
   /* 대화의 출력 칸(AI 출력·도슨트 답)은 오른쪽 아래 손잡이로 크기를 바꿀 수 있다. 줄어들지 않도록 flex:none. 좁은 창에서는 최소 너비도 창 안으로 줄어든다. */
   #log .a, #log .thread-source { flex:none; overflow:auto; resize:both; min-width:min(240px, 100%); min-height:48px }
   .thread-source-head { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:12px; font-weight:500; color:var(--mute) }
-  /* AI 출력 칸: 접으면 머리줄만, 핀을 누르면 대화 위에 떠 있는 고정 칸이 된다 */
+  /* AI 출력 칸: 접으면 머리줄만, 핀을 누르면 전체 폭 그대로 대화 맨 위에 붙아 있는다(스크롤해도 따라옴) */
   .thread-source-head .icon-btn { width:22px; height:22px } .thread-source-head .icon-btn svg { width:12px; height:12px }
-  .thread-source-head .icon-btn[data-tip]:hover::after, .thread-source-head .icon-btn[data-tip]:focus-visible::after { top:calc(100% + 6px); left:50%; right:auto; transform:translateX(-50%) }
+  .thread-source-head .icon-btn[data-tip]:hover::after, .thread-source-head .icon-btn[data-tip]:focus-visible::after { left:auto; right:0; transform:none }
   .thread-fold svg { transition:transform .15s }
   .thread-fold[aria-expanded="false"] svg { transform:rotate(180deg) }
   .thread-pin[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:var(--on-accent) }
-  .thread-source.collapsed { padding-bottom:12px }
-  .thread-source.pinned { position:absolute; top:12px; right:16px; left:auto; width:min(480px, 72%); max-height:calc(100% - 24px); z-index:7; box-shadow:0 10px 30px #0003; align-self:auto; background:var(--panel) }
-  /* 대화 칸: 기본으로 가장 최근 대화를 따라가고, 위로 올리면 맨 아래 화살표가 나타난다 */
-  #logWrap { flex:1; min-height:0; position:relative; display:flex }
-  #logJump { position:absolute; right:18px; bottom:14px; z-index:6; box-shadow:0 4px 14px #0003 }
+  /* 접힌 칸은 머리줄 하나뿐이다. 높이 최소값을 풀고 툴팁이 칸 밖으로 나갈 수 있게 넘침을 연다. */
+  #log .thread-source.collapsed { overflow:visible; min-height:0 }
+  .thread-source.collapsed { padding:8px 16px }
+  .thread-source.collapsed .thread-source-head { margin-bottom:0 }
+  /* 핀: 대화 맨 위에 전체 폭으로 붙아 있고, 아래 글이 그 밑으로 흐른다. 로그 안쪽 여백까지 꽉 채운다. */
+  /* 핀: 원문 칸이 대화 위쪽에 공간을 차지한 채 고정되고, 대화는 그 아래 영역에서 스크롤된다(static과 같은 배치) */
+  #logWrap { flex:1; min-height:0; position:relative; display:flex; flex-direction:column }
+  .thread-source.pinned { flex:none; margin:0 22px 12px; max-height:45%; overflow:auto; box-shadow:0 6px 20px #0002 }
+  .thread-source.pinned.collapsed { overflow:visible; max-height:none }
+  #logJump { position:absolute; left:50%; transform:translateX(-50%); bottom:14px; z-index:6; box-shadow:0 4px 14px #0003 }
+  /* 세션 목록 탭: 전체와 peer(Tailscale 기기)별로 목록을 나눈다 */
+  .side-tabs { flex:none; display:flex; flex-wrap:wrap; gap:4px; padding:8px 16px 0 }
+  .side-tab { font:inherit; font-size:12px; line-height:1.2; color:var(--mute); border:1px solid var(--line); background:var(--btn); border-radius:999px; padding:4px 10px; cursor:pointer; white-space:nowrap }
+  .side-tab:hover { border-color:var(--accent) }
+  .side-tab.on { background:var(--soft); border-color:var(--accent); color:var(--accent-ink); font-weight:600 }
+  .side-empty { margin:0; padding:16px; color:var(--mute); text-align:center }
   .thread-source ul { margin:8px 0 0; padding-left:20px } .thread-source li { margin:3px 0 }
   /* AI가 제시한 선택지는 불릿 대신 "선택지 번호" 뱃지로 구별한다. 질문 말풍선과 같은 노란 바탕이다. */
   .thread-source ul.option-list { list-style:none; padding:0; margin:10px 0 0; display:flex; flex-direction:column; gap:8px }
@@ -421,6 +432,7 @@
     </span>
   </h1>
   <h2 class="pane-title side-title">세션<small id="count"></small></h2>
+  <div id="sideTabs" class="side-tabs" hidden></div>
   <div class="filter-row"><input id="filter" type="search" placeholder="세션 검색하기" aria-label="세션 검색하기" /></div>
   <div id="sessions"></div>
   <footer class="side-foot">
@@ -1175,20 +1187,39 @@ async function loadSessions() {
   try {
     const entries = await api("/api/sessions");
     if (request !== sessionsRequest) return;
-    sessions = entries; $("#count").textContent = sessions.length; renderSessions();
+    sessions = entries; renderSideTabs(); renderSessions();
     refreshedAt = new Date().toISOString(); refreshFailed = false;
   } catch { if (request === sessionsRequest) refreshFailed = true; }
   renderRefreshed();
 }
 
 const SESSION_PAGE = 10;
-let sessionLimit = SESSION_PAGE;
+let sessionLimit = SESSION_PAGE, sideTab = "all";
 
-/** 최근 세션부터 sessionLimit개만 보여 준다. 열린 세션은 목록 밖으로 밀려나지 않는다. */
+/** 세션 목록 탭: 전체와 peer(Tailscale 기기)별로 나눈다. peer 가 없으면 탭을 숨긴다. */
+function renderSideTabs() {
+  const box = $("#sideTabs");
+  const hosts = [...new Set(sessions.map((s) => s.host).filter(Boolean))];
+  box.hidden = hosts.length === 0;
+  if (box.hidden) { sideTab = "all"; return; }
+  if (sideTab !== "all" && !hosts.includes(sideTab)) sideTab = "all";
+  box.replaceChildren();
+  const mk = (label, value) => {
+    const b = button(label, () => { sideTab = value; sessionLimit = SESSION_PAGE; renderSessions(); }, "side-tab" + (sideTab === value ? " on" : ""));
+    b.setAttribute("aria-pressed", String(sideTab === value));
+    return b;
+  };
+  box.append(mk("전체", "all"));
+  for (const h of hosts) box.append(mk(h, h));
+}
+
+/** 현재 탭과 검색어에 맞는 세션을 최근 것부터 sessionLimit개만 보여 준다. 열린 세션은 목록 밖으로 밀려나지 않는다. */
 function renderSessions() {
   const query = $("#filter").value.trim().toLowerCase();
   const box = $("#sessions"); box.textContent = "";
-  const matches = query ? sessions.filter((s) => [s.title, s.project, s.cwd, s.first, s.host].some((value) => value?.toLowerCase().includes(query))) : sessions;
+  const pool = sideTab === "all" ? sessions : sessions.filter((s) => s.host === sideTab);
+  const matches = query ? pool.filter((s) => [s.title, s.project, s.cwd, s.first, s.host].some((value) => value?.toLowerCase().includes(query))) : pool;
+  $("#count").textContent = matches.length;
   const limit = Math.max(sessionLimit, matches.findIndex((s) => s.id === current?.id) + 1);
   for (const s of matches.slice(0, limit)) {
     const b = button("", () => select(s), "sess" + (current?.id === s.id ? " on" : ""));
@@ -1208,6 +1239,7 @@ function renderSessions() {
     sessionLimit = limit + SESSION_PAGE; renderSessions();
     box.querySelectorAll(".sess")[limit]?.focus();
   }, "pill more-sessions"));
+  if (!matches.length) box.append(el("p", "side-empty", query ? "찾는 세션이 없어요." : "아직 세션이 없어요."));
 }
 
 async function select(s) {
@@ -1384,7 +1416,8 @@ function renderThread({ top = false } = {}) {
   clearSurface(log);
   clearPinnedSource();
   const source = threadSource(key, c);
-  if (source && threadViewState(key).pinned) $("#logWrap").append(source);
+  // 핀으로 고정하면 대화 스크롤 영역 위의 블록으로, 아니면 대화 맨 위 메시지로 둔다.
+  if (source && threadViewState(key).pinned) $("#logWrap").prepend(source);
   else if (source) log.append(source);
   const base = log.childElementCount;
   const rows = threadRecords.filter((record) => inThread(record, key));
@@ -1478,7 +1511,7 @@ const logFollow = new MutationObserver(() => {
   requestAnimationFrame(() => { followScheduled = false; followLog(); });
 });
 logFollow.observe($("#log"), { childList: true, subtree: true, characterData: true });
-/** 핀으로 고정한 AI 출력 칸은 대화 칸이 아니라 그 아래(logWrap)에 떠 있다. 다시 그리기 전에 치운다. */
+/** 핀으로 고정한 AI 출력 칸은 대화 스크롤 영역(logWrap) 위에 블록으로 둔다. 다시 그리기 전에 치운다. */
 function clearPinnedSource() {
   $("#logWrap").querySelectorAll(":scope > .thread-source").forEach((n) => n.remove());
 }
