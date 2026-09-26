@@ -17,7 +17,7 @@ import { extractTerms, filterTerms, glossary } from "./review.mjs";
 import { KEYWORD_PROMPT, extractInput, parseExtract, wiki } from "./wiki.mjs";
 import { parseAnswer } from "./slots.mjs";
 import { parsePeers, peerProvider } from "./peers.mjs";
-import { config, favorites, history, saveKeywords, setFavorite } from "./store.mjs";
+import { config, favorites, history, saveConfig, saveKeywords, setFavorite } from "./store.mjs";
 import { extractCitations, prepareEvidence, resolveEvidence } from "./evidence.mjs";
 import { modelCatalog, selectedModel } from "./models.mjs";
 import { DOMAINS_PROMPT, PLANNING_PROMPT, applyClassification, beginRequest, completeAnswer, createProfile, explanationHints, feedback, httpError, learningItems, parseDomains, parsePlan, planningContext, planningInput, profile, profiles, requestKey, requestSignature, resolveDifficulty, settleRequest, sourceScope, storedRequest, updateProfile } from "./learning.mjs";
@@ -37,7 +37,8 @@ const STATIC_ASSETS = new Map([
 const PROMPT = resolve(ROOT, "../prompt/docent.md");
 const CONFIG = await config();
 const PORT = Number(process.env.DOCENT_PORT ?? CONFIG.port ?? 4747);
-const HOST = await resolveHost(process.env.DOCENT_HOST ?? CONFIG.host ?? "127.0.0.1");
+const HOST_INPUT = process.env.DOCENT_HOST ?? CONFIG.host ?? "127.0.0.1";
+const HOST = await resolveHost(HOST_INPUT);
 const PEERS = parsePeers(process.env.DOCENT_PEERS, CONFIG.peers);
 const OMP_BIN = process.env.OMP_BIN ?? "omp";
 const OMP_TIMEOUT_MS = 180_000;
@@ -47,15 +48,22 @@ const transcripts = new Map();
 
 const HOME = process.env.HOME ?? "";
 
-/** "tailscale" 이면 이 컴퓨터의 테일스케일 IPv4 로. 그 외는 그대로. */
-async function resolveHost(host) {
-	if (host !== "tailscale") return host;
+/** 이 컴퓨터의 테일스케일 IPv4. 못 찾으면 null. */
+async function tailscaleIp() {
 	const bins = ["tailscale", "/Applications/Tailscale.app/Contents/MacOS/Tailscale"];
 	for (const bin of bins) {
 		const ip = await new Promise((res) => execFile(bin, ["ip", "-4"], (err, out) => res(err ? null : out.trim().split("\n")[0])));
 		if (ip) return ip;
 	}
-	throw new Error("tailscale ip 를 알 수 없어요. tailscale 이 켜져 있는지 확인하세요.");
+	return null;
+}
+
+/** "tailscale" 이면 이 컴퓨터의 테일스케일 IPv4 로. 그 외는 그대로. */
+async function resolveHost(host) {
+	if (host !== "tailscale") return host;
+	const ip = await tailscaleIp();
+	if (!ip) throw new Error("tailscale ip 를 알 수 없어요. tailscale 이 켜져 있는지 확인하세요.");
+	return ip;
 }
 
 /**
@@ -486,6 +494,12 @@ const handler = async (req, res) => {
 			res.writeHead(200, { "content-type": asset[1], "cache-control": asset[2] ?? "no-cache", "x-content-type-options": "nosniff" });
 			return res.end(content);
 		}
+		if (req.method === "GET" && url.pathname === "/api/host") return json(res, 200, hostStatus());
+		if (req.method === "POST" && url.pathname === "/api/host") {
+			const input = await body(req);
+			if (typeof input.tailscale !== "boolean") throw httpError(400, "tailscale 는 참/거짓이어야 해요.");
+			return json(res, 200, await setTailscaleShare(input.tailscale));
+		}
 		if (req.method === "GET" && url.pathname === "/api/models") return json(res, 200, await modelCatalog());
 		if (req.method === "GET" && url.pathname === "/api/profiles") return json(res, 200, await profiles());
 		if (req.method === "POST" && url.pathname === "/api/profiles") return json(res, 201, await createProfile((await body(req)).name));
@@ -595,15 +609,77 @@ const handler = async (req, res) => {
 };
 
 // 테일스케일 등 다른 주소에 열어도 이 컴퓨터의 `docent` 명령이 127.0.0.1 로 살아 있는지 확인하므로 loopback 은 항상 연다.
-const hosts = HOST === "127.0.0.1" ? [HOST] : [HOST, "127.0.0.1"];
-for (const h of hosts) {
-	createServer(handler).listen(PORT, h, () => {
-		const url = `http://${h}:${PORT}/`;
-		const peers = Object.keys(PEERS);
-		console.log(`docent: ${url}  (prompt: ${PROMPT}, jev: ${jevEnabled ? "on" : "off"}${peers.length ? `, peers: ${peers.join(" ")}` : ""})`);
+const listeners = new Map();
+const tsShare = { on: false, ip: null };
+
+function listenOn(h) {
+	return new Promise((res, rej) => {
+		const server = createServer(handler);
+		server.once("error", rej);
+		server.listen(PORT, h, () => {
+			listeners.set(h, server);
+			const peers = Object.keys(PEERS);
+			console.log(`docent: http://${h}:${PORT}/  (prompt: ${PROMPT}, jev: ${jevEnabled ? "on" : "off"}${peers.length ? `, peers: ${peers.join(" ")}` : ""})`);
+			res(server);
+		});
+	});
+}
+
+const hostStatus = () => ({ tailscale: tsShare.on, url: tsShare.on && tsShare.ip ? `http://${tsShare.ip}:${PORT}/` : null });
+
+/** 설정창에서 켜는 테일스케일 추가 대기. loopback 은 건드리지 않는다. */
+async function openTailscaleListener() {
+	if (tsShare.on) return hostStatus();
+	const ip = await tailscaleIp();
+	if (!ip) throw httpError(503, "테일스케일 주소를 찾지 못했어요. Tailscale 이 켜져 있는지 확인하세요.");
+	if (!listeners.has(ip)) await listenOn(ip);
+	tsShare.on = true;
+	tsShare.ip = ip;
+	console.log(`docent: 테일스케일 공유를 켰어요 (${tsShare.ip})`);
+	return hostStatus();
+}
+
+async function closeTailscaleListener() {
+	const server = tsShare.ip ? listeners.get(tsShare.ip) : null;
+	if (server) {
+		listeners.delete(tsShare.ip);
+		server.closeAllConnections?.();
+		await new Promise((res) => server.close(res));
+	}
+	tsShare.on = false;
+	tsShare.ip = null;
+	console.log("docent: 테일스케일 공유를 껐어요");
+	return hostStatus();
+}
+
+/** 켜고 끈 상태는 config.json 의 tailscale 에 저장해 재시작 뒤에도 유지한다. 옛 host=tailscale 설정은 여기로 옮겨 둔다. */
+async function setTailscaleShare(on) {
+	if (on) await openTailscaleListener();
+	else await closeTailscaleListener();
+	CONFIG.tailscale = on;
+	const legacy = !process.env.DOCENT_HOST && CONFIG.host === "tailscale";
+	if (legacy) CONFIG.host = "127.0.0.1";
+	await saveConfig({ tailscale: on, ...(legacy ? { host: "127.0.0.1" } : {}) });
+	return hostStatus();
+}
+
+const baseHosts = HOST === "127.0.0.1" ? [HOST] : [...new Set([HOST, "127.0.0.1"])];
+for (const h of baseHosts) {
+	listenOn(h).then(() => {
 		if (h === "127.0.0.1" && process.env.DOCENT_ON_LISTEN === "open") {
 			const opener = { darwin: "open", win32: "start", linux: "xdg-open" }[process.platform];
-			if (opener) execFile(opener, [url], () => {});
+			if (opener) execFile(opener, [`http://${h}:${PORT}/`], () => {});
 		}
+	}, (error) => {
+		console.error(`docent: ${h}:${PORT} 을 열 수 없어요 (${error.message})`);
+		process.exit(1);
 	});
+}
+// host=tailscale 로 시작했으면 이미 열려 있는 테일스케일 대기를 상태로 기록하고,
+// 설정창에서 켜 둔 것(tailscale 참)이면 여기서 다시 연다. 실패해도 loopback 은 살아 있게 경고만 한다.
+if (HOST_INPUT === "tailscale" && HOST !== "127.0.0.1") {
+	tsShare.on = true;
+	tsShare.ip = HOST;
+} else if (CONFIG.tailscale === true) {
+	openTailscaleListener().catch((error) => console.error(`docent: 테일스케일 공유를 열지 못했어요 (${error.message})`));
 }

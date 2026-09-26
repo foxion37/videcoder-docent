@@ -16,7 +16,7 @@
   * { box-sizing:border-box }
   [hidden] { display:none !important }
   button { color:inherit }
-  body { margin:0; font:15px/1.55 "Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; color:var(--ink); background:var(--bg); height:100vh; display:grid; grid-template-columns:300px minmax(0, 1fr) }
+  body { margin:0; font:14px/1.55 "Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; color:var(--ink); background:var(--bg); height:100vh; display:grid; grid-template-columns:var(--side-size, 300px) minmax(0, 1fr) }
   /* 기본으로 굵게 나오는 제목, 굵은 글씨, 표 머리도 한 단계 가볍게(700 → 600). 명시한 굵기는 각 규칙에서 정한다. */
   h1, h2, h3, h4, h5, h6, b, strong, th { font-weight:600 }
   aside { background:var(--panel); overflow:auto }
@@ -259,6 +259,7 @@
     #mainHeader, aside h1, .filter-row, .pane-title { height:auto; min-height:var(--bar-sub) }
     .q { max-width:95% }
     aside h1 { flex-wrap:wrap; gap:5px; padding:12px }
+    #sideResizer { display:none }
   }
   aside { display:flex; flex-direction:column; overflow:hidden }
   aside > h1, .side-title, .filter-row { flex:0 0 auto }
@@ -341,8 +342,13 @@
   #workspace[data-stage="none"] { --work-w:0px }
   #flowPane { position:relative; background:var(--pane-work); overflow:hidden; border-right:2px solid var(--line) }
   .resizer { position:absolute; top:0; right:0; bottom:0; width:8px; z-index:3; cursor:col-resize; touch-action:none }
-  .resizer::after { content:""; position:absolute; top:0; bottom:0; right:0; width:2px; background:transparent; transition:background .15s }
+  /* 노란 표시선은 각 칸 경계선 위에 정확히 얹는다. 작업 내용 칸은 2px 테두리, 세션 목록은 1px 그림자선이다. */
+  .resizer::after { content:""; position:absolute; top:0; bottom:0; right:calc(-1 * var(--divider-w, 2px)); width:var(--divider-w, 2px); background:transparent; transition:background .15s }
+  aside .resizer { --divider-w:1px }
   .resizer:hover::after, .resizer:focus-visible::after, #workspace.resizing .resizer::after { background:var(--accent) }
+  body.side-resizing { transition:none; cursor:col-resize; user-select:none }
+  body.side-resizing #sideResizer::after { background:var(--accent) }
+  body.side-collapsed aside .resizer { display:none }
   .resizer:focus-visible { outline:none }
   #workspace[data-stage="none"] .resizer { display:none }
   #chatPane { background:var(--panel) }
@@ -377,6 +383,7 @@
   <h2 class="pane-title side-title">세션<small id="count"></small></h2>
   <div class="filter-row"><input id="filter" type="search" placeholder="세션 검색하기" aria-label="세션 검색하기" /></div>
   <div id="sessions"></div>
+  <div id="sideResizer" class="resizer" role="separator" aria-orientation="vertical" aria-label="세션 목록 너비 조절" aria-valuemin="220" aria-valuemax="480" tabindex="0" title="끌어서 너비 조절, 두 번 누르면 기본값"></div>
 </aside>
 <main>
   <header id="mainHeader">
@@ -487,6 +494,17 @@
       </ul>
       <p id="autoStatus" class="notice" role="status"></p>
     </section>
+    <div class="set-group">이 컴퓨터</div>
+    <section class="set-card">
+      <h3>다른 기기에서 열기</h3>
+      <label class="auto"><input type="checkbox" id="tailscaleShare"> Tailscale 주소에도 열기</label>
+      <ul class="set-list">
+        <li>같은 Tailscale 네트워크의 기기에서 이 컴퓨터의 Tailscale 주소로 접속함.</li>
+        <li>지금 창의 주소는 그대로 유지됨.</li>
+        <li>켜고 끈 상태는 이 컴퓨터 설정 파일에 저장됨.</li>
+      </ul>
+      <p id="tailscaleStatus" class="notice" role="status"></p>
+    </section>
     <section class="set-card">
       <div class="depth-row"><label for="theme">테마</label><select id="theme"><option value="auto">자동</option><option value="light">밝음</option><option value="dark">어둠</option></select></div>
     </section>
@@ -503,6 +521,7 @@ $("#settingsBtn").onclick = () => {
   $("#settings").showModal();
   if (!modelCatalog && !modelCatalogError) loadModelCatalog();
   loadPrefetch();
+  loadTailscale();
 };
 $("#settingsClose").onclick = () => $("#settings").close();
 const EXPLAIN_ACTIONS = [
@@ -1455,6 +1474,35 @@ function renderAutoStatus() {
   $("#autoStatus").textContent = text;
 }
 
+/** 다른 기기에서 열기: 서버의 테일스케일 대기를 켜고 끈다. 이 창의 주소는 바뀌지 않는다. */
+async function loadTailscale() {
+  const box = $("#tailscaleShare"), status = $("#tailscaleStatus");
+  status.textContent = "확인 중.";
+  try {
+    const info = await api("/api/host");
+    box.checked = info.tailscale;
+    box.disabled = false;
+    status.textContent = info.tailscale && info.url ? `켜짐. 다른 기기용 주소: ${info.url}` : "꺼짐";
+  } catch (e) {
+    box.disabled = true;
+    status.textContent = `상태를 확인하지 못했어요: ${e.message}`;
+  }
+}
+$("#tailscaleShare").onchange = async () => {
+  const box = $("#tailscaleShare"), status = $("#tailscaleStatus"), on = box.checked;
+  box.disabled = true;
+  status.textContent = on ? "여는 중." : "닫는 중.";
+  try {
+    const info = await api("/api/host", "POST", { tailscale: on });
+    box.checked = info.tailscale;
+    status.textContent = info.tailscale && info.url ? `켜짐. 다른 기기용 주소: ${info.url}` : "꺼짐";
+  } catch (e) {
+    status.textContent = `${on ? "열지 못했어요" : "닫지 못했어요"}: ${e.message}`;
+  } finally {
+    box.disabled = false;
+  }
+};
+
 
 function renderAnswer(r, c = capture(), compact = false) {
   const a = el("div", "a"), head = el("div", "head"), used = new Set();
@@ -1998,6 +2046,33 @@ $("#workResizer").addEventListener("keydown", (event) => {
 });
 $("#workResizer").addEventListener("dblclick", () => setWorkWidth(WORK_DEFAULT));
 setWorkWidth(Number(saved("workWidth")) || WORK_DEFAULT, false);
+/** 세션 목록 너비도 끌어서 조절하고 기기에 기억한다. 접힌 상태에서는 숨긴다. */
+const SIDE_MIN = 220, SIDE_MAX = 480, SIDE_DEFAULT = 300;
+function setSideWidth(px, save = true) {
+  const width = Math.round(Math.min(SIDE_MAX, Math.max(SIDE_MIN, px)));
+  document.body.style.setProperty("--side-size", `${width}px`);
+  $("#sideResizer").setAttribute("aria-valuenow", String(width));
+  if (save) remember("sideWidth", String(width));
+}
+$("#sideResizer").addEventListener("pointerdown", (event) => {
+  const handle = event.currentTarget;
+  handle.setPointerCapture(event.pointerId);
+  document.body.classList.add("side-resizing");
+  const move = (e) => setSideWidth(e.clientX, false);
+  const up = (e) => {
+    handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", up); handle.removeEventListener("pointercancel", up);
+    document.body.classList.remove("side-resizing");
+    setSideWidth(e.clientX);
+  };
+  handle.addEventListener("pointermove", move); handle.addEventListener("pointerup", up); handle.addEventListener("pointercancel", up);
+});
+$("#sideResizer").addEventListener("keydown", (event) => {
+  const step = event.shiftKey ? 60 : 20, now = document.querySelector("aside").getBoundingClientRect().width;
+  if (event.key === "ArrowLeft") setSideWidth(now - step); else if (event.key === "ArrowRight") setSideWidth(now + step); else return;
+  event.preventDefault();
+});
+$("#sideResizer").addEventListener("dblclick", () => setSideWidth(SIDE_DEFAULT));
+setSideWidth(Number(saved("sideWidth")) || SIDE_DEFAULT, false);
 /** 로고: 다시보기와 열린 대화를 닫고 가장 최근에 활동한 세션(지금 작업 중일 가능성이 가장 큰 것)으로 간다. */
 $("#homeBtn").onclick = () => {
   if (view === "review") showChat();

@@ -166,3 +166,24 @@ export async function config() {
 		return {};
 	}
 }
+
+/** config.json 의 일부 항목만 고친다. 나머지 항목과 옛 모양은 그대로 둔다. */
+export async function saveConfig(patch) {
+	const path = join(DOCENT_HOME, "config.json");
+	const next = { ...(await config()), ...patch };
+	await mkdir(DOCENT_HOME, { recursive: true });
+	const temp = `${path}.${process.pid}.${randomUUID()}.tmp`;
+	try {
+		const file = await open(temp, "wx", 0o600);
+		try {
+			await file.writeFile(`${JSON.stringify(next, null, 2)}\n`);
+			await file.sync();
+		} finally {
+			await file.close();
+		}
+		await rename(temp, path);
+	} finally {
+		await rm(temp, { force: true });
+	}
+	return next;
+}

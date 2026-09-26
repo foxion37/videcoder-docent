@@ -85,7 +85,7 @@ docs/                     개념·범위·결정
 
 ## 다른 컴퓨터 (ADR 0011)
 
-`~/.docent/config.json`의 `peers`마다 제공자가 붙는다. 원격 세션 ID는 `@이름/원래id`. 목록·전사·라이브를 원격에서 읽고 답변은 내 omp로 만든다. ADR 0014부터 원격 문답은 자동으로 합치지 않는다. 같은 프로필 ID가 같은 사람이라는 보장이 없기 때문이다. `--host tailscale`은 테일스케일 IPv4에도 열며 loopback은 유지한다.
+`~/.docent/config.json`의 `peers`마다 제공자가 붙는다. 원격 세션 ID는 `@이름/원래id`. 목록·전사·라이브를 원격에서 읽고 답변은 내 omp로 만든다. ADR 0014부터 원격 문답은 자동으로 합치지 않는다. 같은 프로필 ID가 같은 사람이라는 보장이 없기 때문이다. `--host tailscale`은 테일스케일 IPv4에도 열며 loopback은 유지한다. 같은 대기는 설정창 "다른 기기에서 열기"(`GET/POST /api/host`)로 실행 중에도 켜고 끌 수 있고, 상태는 config.json의 `tailscale`에 저장한다 (ADR 0034).
 
 ## 개인화 저장과 PiP (ADR 0014)
 
