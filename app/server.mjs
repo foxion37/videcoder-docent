@@ -69,6 +69,23 @@ async function resolveHost(host) {
 	return ip;
 }
 
+/** 작업 폴더가 속한 git 저장소 이름. 위로 올라가며 .git 을 찾고, 결과는 폴더별로 기억한다. */
+const repoOf = (() => {
+	const cache = new Map();
+	return async (cwd) => {
+		if (!cwd) return null;
+		if (cache.has(cwd)) return cache.get(cwd);
+		let out = null;
+		let dir = cwd;
+		for (let i = 0; i < 8 && dir && dir !== "/"; i++) {
+			if (await stat(join(dir, ".git")).then(() => true).catch(() => false)) { out = basename(dir); break; }
+			dir = dirname(dir);
+		}
+		cache.set(cwd, out);
+		return out;
+	};
+})();
+
 /**
  * 세션 폴더 하나를 제공자로. 파일은 `root` 아래 `depth` 단계 폴더 안에 있고 이름이 `match` 와 맞아야 한다.
  * `stamp(path)` 는 본 파일 밖에서 전사에 들어가는 것(예: 서브에이전트 파일)의 변경 표시다.
@@ -111,6 +128,7 @@ function jsonlProvider({ id, root, depth = 1, match = /\.jsonl$/, headBytes, met
 					provider: id,
 					title: m.title,
 					project: m.cwd ? basename(m.cwd) : rel.split("/")[0],
+					...(m.cwd ? { repo: await repoOf(m.cwd) } : {}),
 					cwd: m.cwd,
 					started: m.started,
 					updated: st.mtime.toISOString(),

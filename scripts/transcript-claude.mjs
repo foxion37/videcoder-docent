@@ -273,10 +273,10 @@ export function extractClaudeEvents(entries) {
 			if (t) out.push({ kind: "user", text: t.slice(0, EVENT_HEAD) });
 		} else if (e.type === "assistant") {
 			for (const b of e.message?.content ?? []) {
-				if (b.type === "text" && b.text.trim()) out.push({ kind: "assistant", text: b.text.trim() });
+				if (b.type === "text" && b.text.trim()) out.push({ kind: "assistant", text: b.text.trim(), ts: e.timestamp ?? null });
 				else if (b.type === "tool_use" && b.name === "AskUserQuestion") {
 					for (const q of b.input?.questions ?? [])
-						out.push({ kind: "question", text: q.question, options: (q.options ?? []).map((o) => ({ label: o.label, description: o.description ?? "" })) });
+						out.push({ kind: "question", text: q.question, options: (q.options ?? []).map((o) => ({ label: o.label, description: o.description ?? "" })), ts: e.timestamp ?? null });
 				}
 			}
 		}

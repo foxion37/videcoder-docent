@@ -130,6 +130,7 @@ const EVENT_HEAD = 600;
 export function extractOmpEvents(entries) {
 	const out = [];
 	for (const e of entries) {
+		const ts = e.timestamp ?? e.ts ?? null;
 		if (e.type === "message") {
 			const m = e.message;
 			if (m.role === "user") {
@@ -137,10 +138,10 @@ export function extractOmpEvents(entries) {
 				if (t) out.push({ kind: "user", text: t.slice(0, EVENT_HEAD) });
 			} else if (m.role === "assistant") {
 				for (const b of m.content ?? []) {
-					if (b.type === "text" && b.text.trim()) out.push({ kind: "assistant", text: b.text.trim() });
+					if (b.type === "text" && b.text.trim()) out.push({ kind: "assistant", text: b.text.trim(), ts });
 					else if (b.type === "toolCall" && b.name === "ask") {
 						for (const q of b.arguments?.questions ?? [])
-							out.push({ kind: "question", text: q.question, options: (q.options ?? []).map((o) => ({ label: o.label, description: o.description ?? "" })) });
+							out.push({ kind: "question", text: q.question, options: (q.options ?? []).map((o) => ({ label: o.label, description: o.description ?? "" })), ts });
 					}
 				}
 			} else if (m.role === "toolResult" && m.isError) {

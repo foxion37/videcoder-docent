@@ -46,7 +46,8 @@
   .sess:focus-visible { outline:2px solid var(--accent-ink); outline-offset:-3px }
   .sess .t { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-size:14px; line-height:1.45; font-weight:400; letter-spacing:-.02em }
   .sess .m { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12px; margin-top:10px; line-height:1.6 }
-  .session-meta { max-width:100%; overflow-wrap:anywhere }
+  .session-meta { min-width:0; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+  .session-meta.repo { color:var(--project) }
   .session-meta.platform { color:var(--platform) }
   .session-meta.project { color:var(--project) }
   .session-meta.host { color:var(--host) }
@@ -250,6 +251,7 @@
   .evidence-block pre { white-space:pre-wrap; overflow-wrap:anywhere; font:13px/1.6 ui-monospace, "Symbols Nerd Font Mono", "JetBrainsMono Nerd Font", "MesloLGS NF", monospace; margin:8px 0 0 }
   .evidence-block h3 { margin:0; font-size:14px }
   .event-heading { display:flex; align-items:center; gap:8px; margin-bottom:6px; color:var(--mute); font-size:12px }
+  .event-time { flex:none; margin-left:auto; color:var(--mute); font-size:11px; line-height:1.4; font-variant-numeric:tabular-nums }
   .event-new { display:inline-flex; align-items:center; height:22px; line-height:1; color:var(--activity); font-size:11px; font-weight:550 }
   .event-title { font-size:14px; line-height:1.45; margin:0 0 6px; font-weight:400; min-width:0 }
   .event-state { margin-bottom:8px; color:var(--mute); font-size:13px }
@@ -1229,6 +1231,7 @@ function renderSessions() {
     b.append(el("span", "t", s.title));
     const meta = el("span", "m");
     meta.append(el("span", "session-meta project", s.project));
+    if (s.repo && s.repo !== s.project) meta.append(el("span", "session-meta repo", s.repo));
     meta.append(el("span", "session-meta platform", s.provider));
     if (s.host) meta.append(el("span", "session-meta host", s.host));
     meta.append(el("span", `session-meta ${live ? "activity" : "time"}`, `${live ? "최근 활동, " : ""}${rel(s.updated)}`));
@@ -1254,7 +1257,7 @@ async function select(s) {
   infoSummary.append("세션 정보"); info.append(infoSummary);
   const fields = el("dl");
   const date = (value) => value && Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString("ko-KR") : "확인되지 않음";
-  for (const [label, value] of [["작업 폴더", s.cwd], ["기기", s.host || "로컬"], ["시작", date(s.started)], ["최근 활동", date(s.updated)], ["첫 요청", s.first]]) {
+  for (const [label, value] of [["작업 폴더", s.cwd], ["레포지토리", s.repo], ["기기", s.host || "로컬"], ["시작", date(s.started)], ["최근 활동", date(s.updated)], ["첫 요청", s.first]]) {
     if (value) fields.append(el("dt", null, label), el("dd", null, value));
   }
   const pop = el("div", "session-pop"), link = el("a", null, "기록 원문 열기");
@@ -1622,6 +1625,9 @@ function renderEvent(ev) {
     document.querySelectorAll(".event-new").forEach((tag) => tag.remove());
     heading.append(el("span", "event-new", "NEW"));
   }
+  // 사건이 생긴 시각. 과거 재생은 기록의 시각, 새 사건은 기록에 시각이 없으면 받은 시각을 쓴다.
+  const when = ev.ts ?? ev.at;
+  if (when && Number.isFinite(new Date(when).getTime())) heading.append(el("span", "event-time", rel(when)));
   const status = el("div", "event-state"); status.setAttribute("role", "status");
   const open = button(focus.label, () => openCard(card, c), "event-open"); open.title = focus.label;
   const title = el("h3", "event-title"); title.append(open);

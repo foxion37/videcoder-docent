@@ -244,11 +244,11 @@ export function extractCodexEvents(entries) {
 				if (t) out.push({ kind: "user", text: t.slice(0, EVENT_HEAD) });
 			} else if (p.role === "assistant") {
 				const t = blockText(p.content).trim();
-				if (t) out.push({ kind: "assistant", text: t });
+				if (t) out.push({ kind: "assistant", text: t, ts: e.timestamp ?? null });
 			}
 		} else if (e.type === "response_item" && (p?.type === "custom_tool_call" || p?.type === "function_call") && isAsk(p)) {
 			for (const q of askQuestions(parseArgs(p.arguments)))
-				out.push({ kind: "question", text: q.question, options: (q.options ?? []).map((o) => ({ label: o.label, description: o.description ?? "" })) });
+				out.push({ kind: "question", text: q.question, options: (q.options ?? []).map((o) => ({ label: o.label, description: o.description ?? "" })), ts: e.timestamp ?? null });
 		} else if (e.type === "response_item" && (p?.type === "custom_tool_call_output" || p?.type === "function_call_output") && isErrorOutput(p.output)) {
 			out.push({ kind: "error", text: errorSummary(outputText(p.output), EVENT_HEAD) });
 		} else if (e.type === "event_msg" && p?.type === "task_complete") {

@@ -241,12 +241,13 @@ export function readGeminiProjectRoot(sessionPath) {
 export function extractGeminiEvents(entries) {
 	const out = [];
 	const emit = (m) => {
+		const ts = m.timestamp ?? null;
 		if (m.type === "user") {
 			const t = partText(m.content).trim();
 			if (t && !isInjected(t)) out.push({ kind: "user", text: t.slice(0, EVENT_HEAD) });
 		} else if (m.type === "gemini") {
 			const t = partText(m.content).trim();
-			if (t) out.push({ kind: "assistant", text: t });
+			if (t) out.push({ kind: "assistant", text: t, ts });
 			for (const call of toolCallsOf(m)) {
 				if (call.name === ASK_TOOL) {
 					for (const q of call.args?.questions ?? [])
@@ -254,6 +255,7 @@ export function extractGeminiEvents(entries) {
 							kind: "question",
 							text: q.question,
 							options: (q.options ?? []).map((o) => ({ label: o.label, description: o.description ?? "" })),
+							ts,
 						});
 				}
 				if (call.status === "error") out.push({ kind: "error", tool: call.name, text: errorSummary(resultText(call), EVENT_HEAD) });
