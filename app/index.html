@@ -75,7 +75,7 @@
   .header-actions { flex:none; display:flex; align-items:center; gap:8px }
   .auto { display:flex; align-items:center; gap:4px; flex:none; color:var(--mute); font-size:13px; white-space:nowrap; cursor:pointer }
   .auto input { flex:none; margin:0; padding:0 }
-  #log { flex:1; overflow:auto; padding:20px 22px; display:flex; flex-direction:column; gap:28px }
+  #log { flex:1; overflow:auto; scrollbar-gutter:stable; padding:20px 22px; display:flex; flex-direction:column; gap:28px }
   .thread-source { flex:none; align-self:stretch; box-sizing:border-box; background:var(--pane-work); border:1px solid var(--line); border-radius:12px; padding:12px 16px }
   /* 대화의 출력 칸(AI 출력·도슨트 답)은 오른쪽 아래 손잡이로 크기를 바꿀 수 있다. 줄어들지 않도록 flex:none. 좁은 창에서는 최소 너비도 창 안으로 줄어든다. */
   #log .a, #log .thread-source { flex:none; overflow:auto; resize:both; min-width:min(240px, 100%); min-height:48px }
@@ -90,6 +90,7 @@
   #log .thread-source.collapsed { overflow:visible; min-height:0 }
   .thread-source.collapsed { padding:8px 16px }
   .thread-source.collapsed .thread-source-head { margin-bottom:0 }
+  .thread-source.collapsed .thread-source-body { display:none }
   /* 핀: 대화 맨 위에 전체 폭으로 붙아 있고, 아래 글이 그 밑으로 흐른다. 로그 안쪽 여백까지 꽉 채운다. */
   /* 핀: 원문 칸이 대화 위쪽에 공간을 차지한 채 고정되고, 대화는 그 아래 영역에서 스크롤된다(static과 같은 배치) */
   #logWrap { flex:1; min-height:0; position:relative; display:flex; flex-direction:column }
@@ -1372,33 +1373,40 @@ const threadViewState = (key) => {
   return threadViews.get(key);
 };
 
-/** 카드의 사건 원문(AI 출력)을 그 카드 대화 맨 위에 보여 준다. 접기와 핀(플로팅 고정)은 본문 대화에서만 쓴다. */
+/** 카드의 사건 원문(AI 출력)을 그 카드 대화 맨 위에 보여 준다. 접기와 핀(고정)은 본문 대화에서만 쓴다. */
 function threadSource(key, c, controls = true) {
   const card = key ? cardByThread.get(key) : null;
   if (!card?.source) return null;
   const box = el("section", "thread-source"); box.setAttribute("aria-label", "AI 출력 내용");
   const head = el("div", "thread-source-head"); head.append(catChip(card.dataset.eventType), el("span", null, "AI 출력"));
+  const body = el("div", "thread-source-body");
+  body.append(markdown(card.source.text, c, {}, "event-original"));
+  if (card.source.options?.length) body.append(optionList(card.source.options, c));
   const st = controls ? threadViewState(key) : null;
   if (st) {
-    const pin = button("", () => { st.pinned = !st.pinned; renderThread(); }, "icon-btn small thread-pin");
+    // 접기와 핀은 대화를 다시 그리지 않고 이 칸의 모양과 자리만 바꾼다. 다시 그리면 대화 위치가 미묘하게 흔들린다.
+    const pin = button("", () => {
+      st.pinned = !st.pinned;
+      (st.pinned ? $("#logWrap") : $("#log")).prepend(box);
+      applyView();
+    }, "icon-btn small thread-pin");
     pin.innerHTML = PIN_SVG;
-    pin.setAttribute("aria-pressed", String(st.pinned));
-    pin.setAttribute("aria-label", st.pinned ? "고정 해제" : "대화 위에 고정");
-    pin.dataset.tip = st.pinned ? "고정 해제" : "대화 위에 고정";
-    const fold = button("", () => { st.collapsed = !st.collapsed; renderThread(); }, "icon-btn small thread-fold");
+    const fold = button("", () => { st.collapsed = !st.collapsed; applyView(); }, "icon-btn small thread-fold");
     fold.innerHTML = FOLD_SVG;
-    fold.setAttribute("aria-expanded", String(!st.collapsed));
-    fold.setAttribute("aria-label", st.collapsed ? "AI 출력 펼치기" : "AI 출력 접기");
-    fold.dataset.tip = st.collapsed ? "펼치기" : "접기";
+    const applyView = () => {
+      box.classList.toggle("pinned", st.pinned);
+      box.classList.toggle("collapsed", st.collapsed);
+      pin.setAttribute("aria-pressed", String(st.pinned));
+      pin.setAttribute("aria-label", st.pinned ? "고정 해제" : "대화 위에 고정");
+      pin.dataset.tip = st.pinned ? "고정 해제" : "대화 위에 고정";
+      fold.setAttribute("aria-expanded", String(!st.collapsed));
+      fold.setAttribute("aria-label", st.collapsed ? "AI 출력 펼치기" : "AI 출력 접기");
+      fold.dataset.tip = st.collapsed ? "펼치기" : "접기";
+    };
     head.append(pin, fold);
-    box.classList.toggle("pinned", st.pinned);
-    box.classList.toggle("collapsed", st.collapsed);
+    applyView();
   }
-  box.append(head);
-  if (!st?.collapsed) {
-    box.append(markdown(card.source.text, c, {}, "event-original"));
-    if (card.source.options?.length) box.append(optionList(card.source.options, c));
-  }
+  box.append(head, body);
   return box;
 }
 
