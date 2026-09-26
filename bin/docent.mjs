@@ -35,10 +35,12 @@ if (flag("--host")) process.env.DOCENT_HOST = flag("--host");
 const peers = args.flatMap((a, i) => (a === "--peer" && args[i + 1] ? [args[i + 1]] : []));
 if (peers.length) process.env.DOCENT_PEERS = [process.env.DOCENT_PEERS, ...peers].filter(Boolean).join(",");
 
-const opener = { darwin: "open", win32: "start", linux: "xdg-open" }[process.platform];
+// Windows 의 start 는 명령이 아니라 cmd 의 내장 명령이므로 cmd 로 부른다.
+const openers = { darwin: ["open"], win32: ["cmd", "/c", "start", ""], linux: ["xdg-open"] };
+const opener = openers[process.platform];
 const open = () => {
-	if (!openBrowser || !opener) return;
-	execFile(opener, [url], () => {});
+  if (!openBrowser || !opener) return;
+  execFile(opener[0], [...opener.slice(1), url], () => {});
 };
 
 const alive = await fetch(`${url}api/sessions`).then((r) => r.ok).catch(() => false);

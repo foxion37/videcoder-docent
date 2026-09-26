@@ -23,11 +23,24 @@ Vibecoder Docent explains coding-agent sessions in plain Korean without changing
 
 ## 설치
 
-공개 GitHub Release에 첨부된 패키지를 설치한다.
+Node.js 22 이상이 필요하다. macOS·Linux·Windows 모두 같은 명령으로 설치한다.
 
 ```sh
+# 공개 GitHub Release 패키지
 npm install -g https://github.com/foxion37/videcoder-docent/releases/latest/download/videcoder-docent.tgz
+
+# 저장소에서 바로 설치해도 같다
+npm install -g github:foxion37/videcoder-docent
 ```
+
+설치 없이 바로 실행할 수도 있다.
+
+```sh
+npx github:foxion37/videcoder-docent    # npm
+bunx github:foxion37/videcoder-docent   # bun
+```
+
+Windows에서는 PowerShell이나 명령 프롬프트에서 `docent`를 실행하면 기본 브라우저로 열린다.
 
 ## 실행
 

@@ -3,7 +3,7 @@ import { execFile } from "node:child_process";
 import { mkdtemp, open, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { claudeSubagentStamp, extractClaudeEvents, normalizeClaudeSession, parseClaudeLines, readClaudeSessionMeta, readClaudeSubagents } from "../scripts/transcript-claude.mjs";
@@ -46,7 +46,7 @@ const MAX_SESSION_BYTES = 80 * 1024 * 1024;
 const TRANSCRIPT_CACHE = 8;
 const transcripts = new Map();
 
-const HOME = process.env.HOME ?? "";
+const HOME = process.env.HOME ?? homedir();
 
 /** 이 컴퓨터의 테일스케일 IPv4. 못 찾으면 null. */
 async function tailscaleIp() {
@@ -666,9 +666,11 @@ async function setTailscaleShare(on) {
 const baseHosts = HOST === "127.0.0.1" ? [HOST] : [...new Set([HOST, "127.0.0.1"])];
 for (const h of baseHosts) {
 	listenOn(h).then(() => {
-		if (h === "127.0.0.1" && process.env.DOCENT_ON_LISTEN === "open") {
-			const opener = { darwin: "open", win32: "start", linux: "xdg-open" }[process.platform];
-			if (opener) execFile(opener, [`http://${h}:${PORT}/`], () => {});
+		// Windows 의 start 는 명령이 아니라 cmd 의 내장 명령이므로 cmd 로 부른다.
+		const openers = { darwin: ["open"], win32: ["cmd", "/c", "start", ""], linux: ["xdg-open"] };
+		const opener = openers[process.platform];
+		if (h === "127.0.0.1" && process.env.DOCENT_ON_LISTEN === "open" && opener) {
+			execFile(opener[0], [...opener.slice(1), `http://${h}:${PORT}/`], () => {});
 		}
 	}, (error) => {
 		console.error(`docent: ${h}:${PORT} 을 열 수 없어요 (${error.message})`);

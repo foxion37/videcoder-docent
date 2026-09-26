@@ -1,7 +1,7 @@
 /* 한글 본문 기준(KRDS, 토스 TDS, 당근 SEED, WCAG 1.4.8)에서 본문 크기만 사용자 결정으로 14px. 행간 1.6, 자간 0.
    여백 순서: 제목↔본문(.35em ≈ 5px) < 목록 항목(.55em ≈ 8px) < 문단↔문단(1.15em ≈ 16px) < 제목+본문 묶음↔다음 묶음(2em = 28px).
    굵은 글씨만 있는 문단도 소제목으로 본다. */
-.markdown { white-space:normal; overflow-wrap:anywhere; font-size:14px; line-height:1.6; letter-spacing:0; min-width:0; }
+.markdown { white-space:normal; overflow-wrap:anywhere; font-size:var(--content-size, 14px); line-height:1.6; letter-spacing:0; min-width:0; }
 .markdown p { margin:1.15em 0; }
 .markdown h1, .markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6 { line-height:1.45; letter-spacing:0; margin:2em 0 .35em; font-weight:550; }
 .markdown .md-lead { margin:2em 0 .35em; line-height:1.45; }

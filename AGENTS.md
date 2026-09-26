@@ -55,3 +55,4 @@
 - @docs/decisions/0032-classify-after-answer-and-more-hosts.md
 - @docs/decisions/0033-card-output-as-first-message.md
 - @docs/decisions/0034-host-toggle-in-settings.md
+- @docs/decisions/0035-settings-tabs-and-content-size.md
